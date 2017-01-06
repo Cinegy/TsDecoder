@@ -62,6 +62,7 @@
     <Compile Include="TransportStream\TsPacketFactory.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="appveyor.yml" />
     <None Include="Cinegy.TsDecoder.nuspec" />
     <None Include="Readme.md" />
   </ItemGroup>
