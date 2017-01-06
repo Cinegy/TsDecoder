@@ -26,4 +26,4 @@ after_build:
 
     appveyor PushArtifact Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip
 
-    NuGet.exe pack Cinegy.TsDecoder.csproj -Prop Configuration=Release -verbosity detailed
+    NuGet.exe pack Cinegy.TsDecoder.csproj -Prop Configuration=Release -verbosity detailed -version %APPVEYOR_BUILD_VERSION%
