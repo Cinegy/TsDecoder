@@ -15,13 +15,13 @@ build:
 after_build:
 - cmd: >-
     cd %APPVEYOR_BUILD_FOLDER%
-   
+
     7z a Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%.zip %APPVEYOR_BUILD_FOLDER%\bin\release\Cinegy.TsDecoder.dll
-   
+
     appveyor PushArtifact Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%.zip
 
     NuGet.exe pack "%APPVEYOR_BUILD_FOLDER%\Cinegy.TsDecoder.csproj" -Prop Configuration=Release -verbosity detailed
-		    
+
     7z a Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip %APPVEYOR_BUILD_FOLDER%\bin\release
 
     appveyor PushArtifact Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip
