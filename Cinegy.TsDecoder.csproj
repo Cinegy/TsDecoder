@@ -40,6 +40,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Buffers\RingBuffer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tables\ITable.cs" />
     <Compile Include="Tables\ProgramAssociationTable.cs" />
