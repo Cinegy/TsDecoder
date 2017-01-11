@@ -28,7 +28,7 @@ Just to make your life easier, we auto-build this using AppVeyor and push to NuG
 
 You can check out the latest compiled binary from the master or pre-master code here:
 
-[AppVeyor TtxDecoder Project Builder](https://ci.appveyor.com/project/cinegy/tsdecoder/build/artifacts)
+[AppVeyor TsDecoder Project Builder](https://ci.appveyor.com/project/cinegy/tsdecoder/build/artifacts)
 
 Available on NuGet here:
 

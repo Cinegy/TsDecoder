@@ -20,7 +20,7 @@ using System.Threading;
 
 namespace Cinegy.TsDecoder.TransportStream.Buffers
 {
-    internal class RingBuffer
+    public class RingBuffer
     {
         private byte[][] _buffer;
         private long[] _addTimestamp;
