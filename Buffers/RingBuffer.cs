@@ -103,7 +103,25 @@ namespace Cinegy.TsDecoder.TransportStream.Buffers
             }
         }
 
-    
+        /// <summary>
+        /// Provides the current timestamp, which would be attached to any new buffer entries added at that moment
+        /// </summary>
+        /// <returns>Current timestamp, calculated using the Stopwatch timestamp divided by (Stopwatch Timerfrequency / 1000)</returns>
+        public long CurrentTimestamp()
+        {
+            return Stopwatch.GetTimestamp() / TimerFreq;
+        }
 
+        /// <summary>
+        /// Returns the number of items in the buffer awaiting collection
+        /// </summary>
+        /// <returns></returns>
+        public int BufferFullness()
+        {
+            return (ushort)(_lastAddPos - _lastRemPos);
+        }
+
+
+        
     }
 }
