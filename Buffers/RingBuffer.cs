@@ -18,12 +18,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
-namespace Cinegy.TsDecoder.TransportStream.Buffers
+namespace Cinegy.TsDecoder.Buffers
 {
     public class RingBuffer
     {
         private byte[][] _buffer;
-        private long[] _addTimestamp;
+        private long[] _timestamp;
         private int[] _dataLength;
 
         private ushort _lastAddPos;
@@ -45,7 +45,7 @@ namespace Cinegy.TsDecoder.TransportStream.Buffers
             {
                 //allocate buffer and zero
                 _buffer = new byte[ushort.MaxValue + 1][];
-                _addTimestamp = new long[ushort.MaxValue + 1];
+                _timestamp = new long[ushort.MaxValue + 1];
                 _dataLength = new int[ushort.MaxValue + 1];
 
                 for (var n = 0; n <= ushort.MaxValue; ++n)
@@ -61,6 +61,16 @@ namespace Cinegy.TsDecoder.TransportStream.Buffers
         /// <param name="data"></param>
         public void Add(ref byte[] data)
         {
+           Add(ref data, Stopwatch.GetTimestamp() / TimerFreq);
+        }
+
+        /// <summary>
+        /// Add a packet into the ring buffer.
+        /// </summary>
+        /// <param name="data">Bytes to store inside ringbuffer slot</param>
+        /// <param name="timestamp">Timestamp value to associate with entry</param>
+        public void Add(ref byte[] data, long timestamp)
+        {
             lock (_lockObj)
             {
                 if (data.Length <= PacketSize)
@@ -68,7 +78,7 @@ namespace Cinegy.TsDecoder.TransportStream.Buffers
                     //good data size
                     Buffer.BlockCopy(data, 0, _buffer[_lastAddPos], 0, data.Length);
                     _dataLength[_lastAddPos] = data.Length;
-                    _addTimestamp[_lastAddPos++] = Stopwatch.GetTimestamp() / TimerFreq;
+                    _timestamp[_lastAddPos++] = timestamp;
                 }
                 else
                 {
@@ -81,7 +91,7 @@ namespace Cinegy.TsDecoder.TransportStream.Buffers
         /// Get the oldest element from the ring buffer - blocks if no data is yet available
         /// </summary>
         /// <returns></returns>
-        public int Remove(ref byte[] dataBuffer,out int dataLength, out long addedAtTimestamp)
+        public int Remove(ref byte[] dataBuffer,out int dataLength, out long timestamp)
         {
             while(true)
             {
@@ -90,7 +100,7 @@ namespace Cinegy.TsDecoder.TransportStream.Buffers
                     if (_lastRemPos != _lastAddPos)
                     {
                         dataLength = _dataLength[_lastRemPos];
-                        addedAtTimestamp = _addTimestamp[_lastRemPos];
+                        timestamp = _timestamp[_lastRemPos];
 
                         if (dataBuffer.Length < dataLength)
                             return dataLength;
