@@ -23,7 +23,7 @@ namespace Cinegy.TsDecoder.Buffers
     public class RingBuffer
     {
         private byte[][] _buffer;
-        private long[] _timestamp;
+        private ulong[] _timestamp;
         private int[] _dataLength;
 
         private ushort _lastAddPos;
@@ -45,7 +45,7 @@ namespace Cinegy.TsDecoder.Buffers
             {
                 //allocate buffer and zero
                 _buffer = new byte[ushort.MaxValue + 1][];
-                _timestamp = new long[ushort.MaxValue + 1];
+                _timestamp = new ulong[ushort.MaxValue + 1];
                 _dataLength = new int[ushort.MaxValue + 1];
 
                 for (var n = 0; n <= ushort.MaxValue; ++n)
@@ -61,7 +61,7 @@ namespace Cinegy.TsDecoder.Buffers
         /// <param name="data"></param>
         public void Add(ref byte[] data)
         {
-           Add(ref data, Stopwatch.GetTimestamp() / TimerFreq);
+           Add(ref data, (ulong)(Stopwatch.GetTimestamp() / TimerFreq));
         }
 
         /// <summary>
@@ -69,7 +69,7 @@ namespace Cinegy.TsDecoder.Buffers
         /// </summary>
         /// <param name="data">Bytes to store inside ringbuffer slot</param>
         /// <param name="timestamp">Timestamp value to associate with entry</param>
-        public void Add(ref byte[] data, long timestamp)
+        public void Add(ref byte[] data, ulong timestamp)
         {
             lock (_lockObj)
             {
@@ -91,7 +91,7 @@ namespace Cinegy.TsDecoder.Buffers
         /// Get the oldest element from the ring buffer - blocks if no data is yet available
         /// </summary>
         /// <returns></returns>
-        public int Remove(ref byte[] dataBuffer,out int dataLength, out long timestamp)
+        public int Remove(ref byte[] dataBuffer,out int dataLength, out ulong timestamp)
         {
             while(true)
             {
@@ -117,9 +117,9 @@ namespace Cinegy.TsDecoder.Buffers
         /// Provides the current timestamp, which would be attached to any new buffer entries added at that moment
         /// </summary>
         /// <returns>Current timestamp, calculated using the Stopwatch timestamp divided by (Stopwatch Timerfrequency / 1000)</returns>
-        public long CurrentTimestamp()
+        public ulong CurrentTimestamp()
         {
-            return Stopwatch.GetTimestamp() / TimerFreq;
+            return (ulong)(Stopwatch.GetTimestamp() / TimerFreq);
         }
 
         /// <summary>
