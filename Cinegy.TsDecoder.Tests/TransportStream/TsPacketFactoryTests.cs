@@ -13,152 +13,70 @@ namespace Cinegy.TsDecoder.TransportStream.Tests
 {
     [TestClass()]
     public class TsPacketFactoryTests
-    {
+    {   
         [TestMethod()]
-        public void TsPacketFactoryTest()
+        public void GetTsPacketsFromDataTest()
         {
-            try
+            const string resourceName = "Cinegy.TsDecoder.Tests.TestStreams.SD-H264-1mbps-Bars.ts";
+            const int expectedPacketCount = 10493;
+            var sizes = new List<int> { 188, 376, 512, 564, 1024, 1316, 1500, 2048 };
+
+            foreach (var size in sizes)
             {
-                var factory = new TsPacketFactory();
-                if (factory.TsPacketCallbackNumber < 0)
-                {
-                    Assert.Fail("TsPacketFactory has negative default buffer size - this is unexpected");
-                }
-            }
-            catch (Exception ex)
-            {
-                Assert.Fail(ex.Message);
+                Console.WriteLine($"Testing file {resourceName} with block size {size}");
+                PerformUnalignedDataTest(resourceName, expectedPacketCount, size);
             }
         }
 
-        [TestMethod()]
-        public void GetTsPacketsFromDataAsyncTest()
+        private static void PerformUnalignedDataTest(string resourceName, int expectedPacketCount, int readFragmentSize)
         {
             try
             {
-                var tsDecoder = new TsDecoder();
-
                 var factory = new TsPacketFactory();
 
                 //load some data from test file
                 var assembly = Assembly.GetExecutingAssembly();
 
-                const string resourceName = "Cinegy.TsDecoder.Tests.TestStreams.SD-H264-1mbps-Bars.ts";
-                const int expectedPacketCount = 10493;
-                
                 using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
                     if (stream == null) Assert.Fail("Unable to read test resource: " + resourceName);
 
                     var packetCounter = 0;
 
-                    var data = new byte[1024];
+                    var data = new byte[readFragmentSize];
 
                     var fileName = $"streamerror-{DateTime.UtcNow.ToFileTime()}.ts";
 
                     var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write);
 
-                    var errorStream = new BinaryWriter(fs);
+                    var readCount = stream.Read(data, 0, readFragmentSize);
 
-                    var expectedCc = 15;
-
-                    while (stream.Read(data, 0, 1024) > 0)
+                    while (readCount > 0)
                     {
                         try
                         {
-                            var tsPackets = factory.GetTsPacketsFromData(data);
-                            
-                            if (tsPackets == null) break;
-
-                            if (tsPackets.Length > 6)
+                            if (readCount < readFragmentSize)
                             {
-                                Debug.Assert(true,"Not five packets");
+                                var tmpArr = new byte[readCount];
+                                Buffer.BlockCopy(data, 0, tmpArr, 0, readCount);
+                                data = new byte[readCount];
+                                Buffer.BlockCopy(tmpArr, 0, data, 0, readCount);
                             }
 
-                            packetCounter += tsPackets.Length;
-
-
-                            //foreach (var tsPacket in tsPackets)
-                            //{
-                            //    if (tsPacket.Pid == 4096)
-                            //    {
-                            //        if(tsPacket.ContinuityCounter != expectedCc)
-                            //            Console.WriteLine($"{packetCounter} - {tsPacket.Pid}:{tsPacket.ContinuityCounter}");
-
-                            //        expectedCc = tsPacket.ContinuityCounter+1;
-
-                            //        if (expectedCc == 16) expectedCc = 0;
-                            //    }
-                            //}
-
-
-                            if (packetCounter > (expectedPacketCount - 15))
-                            {
-                                foreach (var tsPacket in tsPackets)
-                                {
-                                    Console.WriteLine($"{packetCounter} - {tsPacket.Pid}:{tsPacket.ContinuityCounter}");
-                                }
-                            }
-
-                        }
-                        catch (Exception ex)
-                        {
-                            Assert.Fail($@"Unhandled exception reading sample file: {ex.Message}");
-                        }
-                    }
-                    
-                    if (packetCounter != expectedPacketCount)
-                    {
-                      //  Assert.Fail($"Failed to read expected number of packets in sample file - expected {expectedPacketCount}, got {packetCounter}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Assert.Fail(ex.Message);
-            }
-        }
-
-        [TestMethod()]
-        public void GetTsPacketsFromDataTest()
-        {
-            try
-            {
-                var factory = new TsPacketFactory();
-
-                //load some data from test file
-                var assembly = Assembly.GetExecutingAssembly();
-
-                const string resourceName = "Cinegy.TsDecoder.Tests.TestStreams.SD-H264-1mbps-Bars.ts";
-                const int expectedPacketCount = 10493;
-                var expectedCc = 15;
-
-                using (var stream = assembly.GetManifestResourceStream(resourceName))
-                {
-                    if (stream == null) Assert.Fail("Unable to read test resource: " + resourceName);
-
-                    var packetCounter = 0;
-
-                    var data = new byte[188];
-
-                    while (stream.Read(data, 0, 188) > 0)
-                    {
-                        try
-                        {
                             var tsPackets = factory.GetTsPacketsFromData(data);
 
                             if (tsPackets == null) break;
 
                             packetCounter += tsPackets.Length;
 
-                            if (packetCounter > (expectedPacketCount - 25))
+                            if (stream.Position < stream.Length)
                             {
-                                foreach (var tsPacket in tsPackets)
-                                {
-                                    Console.WriteLine($"{packetCounter} - {tsPacket.Pid}:{tsPacket.ContinuityCounter}");
-                                }
+                                readCount = stream.Read(data, 0, readFragmentSize);
                             }
-
+                            else
+                            {
+                                break;
+                            }
 
                         }
                         catch (Exception ex)
@@ -169,7 +87,8 @@ namespace Cinegy.TsDecoder.TransportStream.Tests
 
                     if (packetCounter != expectedPacketCount)
                     {
-                        Assert.Fail($"Failed to read expected number of packets in sample file - expected {expectedPacketCount}, got {packetCounter}");
+                        Assert.Fail($"Failed to read expected number of packets in sample file - expected {expectedPacketCount}, " +
+                                    $"got {packetCounter}, blocksize: {readFragmentSize}");
                     }
                 }
             }

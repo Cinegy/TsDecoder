@@ -26,61 +26,18 @@ namespace Cinegy.TsDecoder.TransportStream
         private ulong _lastPcr;
 
         private byte[] _residualData;
-
-        private byte[] _buffer;
-        private int _bufferPos = 0;
-        private int _tsPacketCallbackNumber = 7;
-
-        public TsPacketFactory()
-        {
-            _buffer = new byte[_tsPacketCallbackNumber+1];
-        }
-
+               
+        
         /// <summary>
-        /// Accepts unaligned data to be provided to the packet factory, with a callback firing once the return buffer = TsPacketCallbackNumber full
+        /// Returns TsPackets for any input data. If data ends with incomplete packet, this is stored and prepended to next call. 
+        /// If data stream is restarted, prior buffer will be skipped as sync will not be acknowledged - but any restarts should being with first byte as sync to avoid possible merging with prior data if lengths coincide.
         /// </summary>
-        /// <param name="data">Byte array of Transport Stream packets - may be unaligned, but must be contiguous</param>
-        public void GetTsPacketsFromDataAsync(byte[] data)
-        {
-            var subBufferSize = -TsPacketCallbackNumber*TsPacketSize;
-            if (data.Length > subBufferSize)
-            {
-                //a large buffer has been provided - find sync, and split into sub-arrays and provide 
-                var pos = 0;
-
-                while (pos < subBufferSize)
-                {
-                    var syncLocation = FindSync(data,pos);
-
-                    var subBuffer = new byte[subBufferSize];
-                    var packets = GetTsPacketsFromData(subBuffer);
-                }
-                
-
-                    
-                
-            }
-            
-        }
-
-        /// <summary>
-        /// Defines the number of transport stream packets to buffer before firing the callback (default = 7)
-        /// </summary>
-        public int TsPacketCallbackNumber
-        {
-            get { return _tsPacketCallbackNumber; }
-            set
-            {
-                _tsPacketCallbackNumber = value;
-                _buffer = new byte[value+1];
-            }
-        }
-
+        /// <param name="data">Aligned or unaligned data buffer containing TS packets. Aligned is more efficient if possible.</param>
+        /// <returns>Complete TS packets from this data and any prior partial data rolled over.</returns>
         public TsPacket[] GetTsPacketsFromData(byte[] data)
         {
             try
             {
-           
                 if (_residualData != null)
                 {
                     var tempArray = new byte[data.Length];
