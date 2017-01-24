@@ -19,23 +19,42 @@ using System.Diagnostics;
 
 namespace Cinegy.TsDecoder.TransportStream
 {
-    public static class TsPacketFactory
+    public class TsPacketFactory
     {
         private const byte SyncByte = 0x47;
         private const int TsPacketSize = 188;
-        private static ulong _lastPcr;
+        private ulong _lastPcr;
 
-        public static TsPacket[] GetTsPacketsFromData(byte[] data)
+        private byte[] _residualData;
+               
+        
+        /// <summary>
+        /// Returns TsPackets for any input data. If data ends with incomplete packet, this is stored and prepended to next call. 
+        /// If data stream is restarted, prior buffer will be skipped as sync will not be acknowledged - but any restarts should being with first byte as sync to avoid possible merging with prior data if lengths coincide.
+        /// </summary>
+        /// <param name="data">Aligned or unaligned data buffer containing TS packets. Aligned is more efficient if possible.</param>
+        /// <returns>Complete TS packets from this data and any prior partial data rolled over.</returns>
+        public TsPacket[] GetTsPacketsFromData(byte[] data)
         {
             try
             {
+                if (_residualData != null)
+                {
+                    var tempArray = new byte[data.Length];
+                    Buffer.BlockCopy(data,0,tempArray,0,data.Length);
+                    data = new byte[_residualData.Length + tempArray.Length];
+                    Buffer.BlockCopy(_residualData,0,data,0,_residualData.Length);
+                    Buffer.BlockCopy(tempArray,0,data,_residualData.Length,tempArray.Length);
+                }
+
                 var maxPackets = (data.Length) / TsPacketSize;
                 var tsPackets = new TsPacket[maxPackets];
 
-                var start = FindSync(data, 0);
                 var packetCounter = 0;
 
-                while (start >= 0)
+                var start = FindSync(data, 0);
+
+                while (start >= 0 && ((data.Length - start) >= TsPacketSize))
                 {
                     var tsPacket = new TsPacket
                     {
@@ -175,6 +194,13 @@ namespace Cinegy.TsDecoder.TransportStream
                         break;
                     if (data[start] != SyncByte)
                         break;  // but this is strange!
+                }
+
+                if ((start + TsPacketSize) != data.Length)
+                {
+                    //we have 'residual' data to carry over to next call
+                    _residualData = new byte[data.Length - start];
+                    Buffer.BlockCopy(data,start,_residualData,0,data.Length-start);
                 }
 
                 return tsPackets;

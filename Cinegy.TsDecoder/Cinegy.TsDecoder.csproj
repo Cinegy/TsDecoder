@@ -63,10 +63,7 @@
     <Compile Include="TransportStream\TsPacketFactory.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="appveyor.yml" />
     <None Include="Cinegy.TsDecoder.nuspec" />
-    <None Include="LICENSE" />
-    <None Include="Readme.md" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
