@@ -19,23 +19,85 @@ using System.Diagnostics;
 
 namespace Cinegy.TsDecoder.TransportStream
 {
-    public static class TsPacketFactory
+    public class TsPacketFactory
     {
         private const byte SyncByte = 0x47;
         private const int TsPacketSize = 188;
-        private static ulong _lastPcr;
+        private ulong _lastPcr;
 
-        public static TsPacket[] GetTsPacketsFromData(byte[] data)
+        private byte[] _residualData;
+
+        private byte[] _buffer;
+        private int _bufferPos = 0;
+        private int _tsPacketCallbackNumber = 7;
+
+        public TsPacketFactory()
+        {
+            _buffer = new byte[_tsPacketCallbackNumber+1];
+        }
+
+        /// <summary>
+        /// Accepts unaligned data to be provided to the packet factory, with a callback firing once the return buffer = TsPacketCallbackNumber full
+        /// </summary>
+        /// <param name="data">Byte array of Transport Stream packets - may be unaligned, but must be contiguous</param>
+        public void GetTsPacketsFromDataAsync(byte[] data)
+        {
+            var subBufferSize = -TsPacketCallbackNumber*TsPacketSize;
+            if (data.Length > subBufferSize)
+            {
+                //a large buffer has been provided - find sync, and split into sub-arrays and provide 
+                var pos = 0;
+
+                while (pos < subBufferSize)
+                {
+                    var syncLocation = FindSync(data,pos);
+
+                    var subBuffer = new byte[subBufferSize];
+                    var packets = GetTsPacketsFromData(subBuffer);
+                }
+                
+
+                    
+                
+            }
+            
+        }
+
+        /// <summary>
+        /// Defines the number of transport stream packets to buffer before firing the callback (default = 7)
+        /// </summary>
+        public int TsPacketCallbackNumber
+        {
+            get { return _tsPacketCallbackNumber; }
+            set
+            {
+                _tsPacketCallbackNumber = value;
+                _buffer = new byte[value+1];
+            }
+        }
+
+        public TsPacket[] GetTsPacketsFromData(byte[] data)
         {
             try
             {
+           
+                if (_residualData != null)
+                {
+                    var tempArray = new byte[data.Length];
+                    Buffer.BlockCopy(data,0,tempArray,0,data.Length);
+                    data = new byte[_residualData.Length + tempArray.Length];
+                    Buffer.BlockCopy(_residualData,0,data,0,_residualData.Length);
+                    Buffer.BlockCopy(tempArray,0,data,_residualData.Length,tempArray.Length);
+                }
+
                 var maxPackets = (data.Length) / TsPacketSize;
                 var tsPackets = new TsPacket[maxPackets];
 
-                var start = FindSync(data, 0);
                 var packetCounter = 0;
 
-                while (start >= 0)
+                var start = FindSync(data, 0);
+
+                while (start >= 0 && ((data.Length - start) >= TsPacketSize))
                 {
                     var tsPacket = new TsPacket
                     {
@@ -175,6 +237,13 @@ namespace Cinegy.TsDecoder.TransportStream
                         break;
                     if (data[start] != SyncByte)
                         break;  // but this is strange!
+                }
+
+                if ((start + TsPacketSize) != data.Length)
+                {
+                    //we have 'residual' data to carry over to next call
+                    _residualData = new byte[data.Length - start];
+                    Buffer.BlockCopy(data,start,_residualData,0,data.Length-start);
                 }
 
                 return tsPackets;
