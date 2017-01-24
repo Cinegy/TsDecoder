@@ -54,7 +54,7 @@
     <Compile Include="TransportStream\TsPacketFactoryTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Cinegy.TsDecoder.csproj">
+    <ProjectReference Include="..\Cinegy.TsDecoder\Cinegy.TsDecoder.csproj">
       <Project>{838E853D-214B-406F-843D-A76A1FE42C6C}</Project>
       <Name>Cinegy.TsDecoder</Name>
     </ProjectReference>
