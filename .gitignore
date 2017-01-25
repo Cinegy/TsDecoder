@@ -1,5 +1,6 @@
-/*.user
 bin
 obj
-/.vs
-/*.nupkg
+.vs
+*.nupkg
+TestResults
+*.user

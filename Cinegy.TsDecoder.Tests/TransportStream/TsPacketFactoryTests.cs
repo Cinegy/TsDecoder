@@ -1,15 +1,11 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Cinegy.TsDecoder.TransportStream;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+using Cinegy.TsDecoder.TransportStream;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Cinegy.TsDecoder.TransportStream.Tests
+namespace Cinegy.TsDecoder.Tests.TransportStream
 {
     [TestClass()]
     public class TsPacketFactoryTests
@@ -44,11 +40,7 @@ namespace Cinegy.TsDecoder.TransportStream.Tests
                     var packetCounter = 0;
 
                     var data = new byte[readFragmentSize];
-
-                    var fileName = $"streamerror-{DateTime.UtcNow.ToFileTime()}.ts";
-
-                    var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write);
-
+                    
                     var readCount = stream.Read(data, 0, readFragmentSize);
 
                     while (readCount > 0)
