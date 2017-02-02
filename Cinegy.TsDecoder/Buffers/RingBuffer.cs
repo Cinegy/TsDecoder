@@ -126,12 +126,13 @@ namespace Cinegy.TsDecoder.Buffers
         /// Returns the number of items in the buffer awaiting collection
         /// </summary>
         /// <returns></returns>
-        public int BufferFullness()
+        public int BufferFullness
         {
-            return (ushort)(_lastAddPos - _lastRemPos);
+            get
+            {
+                //todo: make this smarter with internal non-ushort trackers so we don't dump a whole buffer load on overflow
+                return (ushort) (_lastAddPos - _lastRemPos);
+            }
         }
-
-
-        
     }
 }
