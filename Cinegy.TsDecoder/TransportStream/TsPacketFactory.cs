@@ -243,7 +243,7 @@ namespace Cinegy.TsDecoder.TransportStream
             return (a << 30) | (b << 15) | c;
         }
 
-        private static int FindSync(IList<byte> tsData, int offset)
+        public static int FindSync(IList<byte> tsData, int offset)
         {
             if (tsData == null) throw new ArgumentNullException(nameof(tsData));
 

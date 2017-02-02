@@ -10,7 +10,7 @@
     <projectUrl>https://github.com/Cinegy/TsDecoder</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
-    <releaseNotes>First release</releaseNotes>
+    <releaseNotes>Breaking change made to API - RingBuffer Fullness is now a property. Also, more unit test coverage added for RingBuffer, and FindSync now public.</releaseNotes>
     <copyright>Copyright Cinegy GmbH 2017</copyright>
     <tags>Transport Stream MPEGTS</tags>
   </metadata>
