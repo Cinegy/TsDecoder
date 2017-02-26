@@ -53,6 +53,8 @@
     <Compile Include="Tables\ProgramMapTableFactory.cs" />
     <Compile Include="Tables\ServiceDescriptionTable.cs" />
     <Compile Include="Tables\ServiceDescriptionTableFactory.cs" />
+    <Compile Include="Tables\SpliceInfoTable.cs" />
+    <Compile Include="Tables\SpliceInfoTableFactory.cs" />
     <Compile Include="Tables\Table.cs" />
     <Compile Include="Tables\TableFactory.cs" />
     <Compile Include="TransportStream\Descriptor.cs" />

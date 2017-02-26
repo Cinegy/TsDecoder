@@ -27,6 +27,7 @@ namespace Cinegy.TsDecoder.TransportStream
         public ProgramAssociationTable ProgramAssociationTable => _patFactory.ProgramAssociationTable;
         public ServiceDescriptionTable ServiceDescriptionTable => _sdtFactory.ServiceDescriptionTable;
         public NetworkInformationTable NetworkInformationTable => _nitFactory.NetworkInformationTable;
+        public SpliceInfoTable SpliceInfoTable => _sitFactory.SpliceInfoTable;
 
         public List<ProgramMapTable> ProgramMapTables { get; private set; }
         
@@ -35,6 +36,7 @@ namespace Cinegy.TsDecoder.TransportStream
         private List<ProgramMapTableFactory> _pmtFactories;
         private EventInformationTableFactory _eitFactory;
         private NetworkInformationTableFactory _nitFactory;
+        private SpliceInfoTableFactory _sitFactory;
         
 
 
@@ -61,6 +63,9 @@ namespace Cinegy.TsDecoder.TransportStream
                         break;
                     case (short)PidType.EitPid:
                         _eitFactory.AddPacket(newPacket);
+                        break;
+                    case (short)2048:
+                        _sitFactory.AddPacket(newPacket);
                         break;
                     default:
                         CheckPmt(newPacket);
@@ -188,6 +193,8 @@ namespace Cinegy.TsDecoder.TransportStream
 
             _nitFactory = new NetworkInformationTableFactory();
             _nitFactory.TableChangeDetected += _nitFactory_TableChangeDetected;
+
+            _sitFactory = new SpliceInfoTableFactory();
         }
 
         public ProgramMapTable GetSelectedPmt(int programNumber)

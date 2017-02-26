@@ -741,6 +741,36 @@ namespace Cinegy.TsDecoder.TransportStream
         public uint ReservedFutureUse2 { get; set; }
     }
 
+    public class CueIdentifierDescriptor : Descriptor
+    {
+        public System.String CueStreamTypeDescription(byte cueType)
+        {
+            switch (cueType)
+            {
+                case 0x00: return "splice_insert, splice_null, splice_schedule"; 
+                case 0x01: return "All Commands"; 
+                case 0x02: return "Segmentation"; 
+                case 0x03: return "Tiered Splicing"; 
+                case 0x04: return "Tiered Segmentation"; 
+                default: if (cueType >= 0x05 && cueType <= 0x7f) return "Reserved"; break;
+            }
+            return "User Defined";
+        }
+
+        
+        public CueIdentifierDescriptor(byte[] stream, int start)
+            : base(stream, start)
+        {
+            CueStreamType = stream[start + 2];
+        }
+
+        public byte CueStreamType { get; set; }
+        public System.String CueStreamTypeString
+        {
+            get { return CueStreamTypeDescription(CueStreamType); }
+        }
+    }
+
     public static class DescriptorFactory
     {
         public static Descriptor DescriptorFromData(byte[] stream, int start)
@@ -761,7 +791,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 case 0x59: return new SubtitlingDescriptor(stream, start);
                 case 0x5a: return new TerrestrialDeliverySystemDescriptor(stream, start);
                 case 0x66: return new DataBroadcastIdDescriptor(stream, start);
-
+                case 0x8A: return new CueIdentifierDescriptor(stream, start);
                 default: return new Descriptor(stream, start);
             }
         }
