@@ -11,7 +11,7 @@ namespace Cinegy.TsDecoder.Buffers.Tests
     [TestClass()]
     public class RingBufferTests
     {
-        private readonly List<int> _bufferSizes = new List<int> { 188, 376, 512, 564, 1024, 1316, 1500, 2048, 16000, 32000, 64000, ushort.MaxValue, ushort.MaxValue + 1, ushort.MaxValue + 2, 2 ^ 17, 2 ^ 17 + 1, 2 ^ 18, 2 ^ 19 };
+        private readonly List<int> _bufferSizes = new List<int> { 12, 188, 376, 512, 564, 1024, 1316, 1500, 2048, 16000, 32000, 64000, ushort.MaxValue, ushort.MaxValue + 1, ushort.MaxValue + 2 }; //, 2 ^ 17, 2 ^ 17 + 1, 2 ^ 18, 2 ^ 19 };
 
         [TestMethod()]
         public void RingBufferTest()
@@ -34,6 +34,7 @@ namespace Cinegy.TsDecoder.Buffers.Tests
         {
             foreach (var size in _bufferSizes)
             {
+                Console.WriteLine($"Testing buffer addition for buffer size {size}");
                 try
                 {
                     var buffer = new RingBuffer(size);
@@ -52,34 +53,34 @@ namespace Cinegy.TsDecoder.Buffers.Tests
         {
             foreach (var size in _bufferSizes)
             {
+                Console.WriteLine($"Testing buffer removal for buffer size {size}");
                 try
                 {
                     var buffer = new RingBuffer(size);
 
-                    FillBufferWithFakeData(buffer, 1316, size);
+                    FillBufferWithFakeData(buffer, 1316, size + 1);
 
                     var data = new byte[1316];
                     int dataLen;
                     ulong tstamp;
-                    buffer.Remove(ref data, out dataLen, out tstamp);
-                    buffer.Remove(ref data, out dataLen, out tstamp);
-                    buffer.Remove(ref data, out dataLen, out tstamp);
-                    buffer.Remove(ref data, out dataLen, out tstamp);
-                    FillBufferWithFakeData(buffer, 3, 4);
 
-                    while (buffer.BufferFullness > 1)
+                    for (var j = 0; j <= size; j++)
                     {
                         buffer.Remove(ref data, out dataLen, out tstamp);
+                        if (data[0] != j % 256)
+                        {
+                            Assert.Fail($"Unexpected value after pushing first data through RingBuffer (expected {j % 256}, got {data[0]})");
+                        }
                     }
 
-                    buffer.Remove(ref data, out dataLen, out tstamp);
+                    const int addCount = 4;
+                    FillBufferWithFakeData(buffer, 1, addCount);
 
-                    //TODO: Clean up test to check after wrapping now added
-
-                    //if (data[0] != 3) Assert.Fail("Unexpected value after pushing through RingBuffer");
-                    //if (data[1] != 3) Assert.Fail("Unexpected value after pushing through RingBuffer");
-                    //if (data[2] != 3) Assert.Fail("Unexpected value after pushing through RingBuffer");
-                    //if (data[3] != 254) Assert.Fail("Unexpected value after pushing through RingBuffer");
+                    for (var j = 0; j < addCount; j++)
+                    {
+                        buffer.Remove(ref data, out dataLen, out tstamp);
+                        if (data[0] != j) Assert.Fail($"Unexpected value after pushing second data through RingBuffer (expected {j}, got {data[0]}");
+                    }
 
                 }
                 catch (Exception ex)
@@ -92,24 +93,40 @@ namespace Cinegy.TsDecoder.Buffers.Tests
         [TestMethod()]
         public void BufferFullnessTest()
         {
-            var buffer = new RingBuffer();
+            foreach (var size in _bufferSizes)
+            {
+                Console.WriteLine($"Testing buffer fullness for buffer size {size}");
+                try
+                {
+                    var buffer = new RingBuffer(size);
+                   
+                    FillBufferWithFakeData(buffer, 1316, 10);
 
-            FillBufferWithFakeData(buffer, 1316, 10);
+                    CheckBufferFullness(buffer, 10);
 
-            CheckBufferFullness(buffer, 10);
+                    var addCount = size - 11;
+                    var sum = addCount + 10;
 
-            FillBufferWithFakeData(buffer, 1316, ushort.MaxValue - 11);
+                    FillBufferWithFakeData(buffer, 2, addCount);
 
-            CheckBufferFullness(buffer, ushort.MaxValue - 1);
+                    CheckBufferFullness(buffer, size - 1);
 
-            FillBufferWithFakeData(buffer, 1316, 1);
+                    FillBufferWithFakeData(buffer, 1316, 1);
 
-            //check with non-standard size buffer
-            buffer = new RingBuffer(2 ^ 17);
+                    //check with non-standard size buffer
+                    buffer = new RingBuffer(2 ^ 17);
 
-            FillBufferWithFakeData(buffer, 1316, 2 ^ 17 - 11);
+                    FillBufferWithFakeData(buffer, 1316, 2 ^ 17 - 11);
 
-            CheckBufferFullness(buffer, 2 ^ 17 - 11);
+                    CheckBufferFullness(buffer, 2 ^ 17 - 11);
+                    FillBufferWithFakeData(buffer, 1316, size);
+                }
+                catch (Exception ex)
+                {
+                    Assert.Fail($"Failed AddTest with buffer size {size} - {ex.Message}");
+                }
+            }
+
 
             //stop here until reimplementing buffer position management (overflow causes wrap now)
 
@@ -136,7 +153,7 @@ namespace Cinegy.TsDecoder.Buffers.Tests
         private void CheckBufferFullness(RingBuffer buffer, int expectedVal)
         {
             if (buffer.BufferFullness != expectedVal)
-                Assert.Fail($"Full ring buffer value is wrong when filled - expected {expectedVal}, found {buffer.BufferFullness}.");
+                Assert.Fail($"Ring buffer fullness value is wrong - expected {expectedVal}, found {buffer.BufferFullness}.");
         }
 
         private void FillBufferWithFakeData(RingBuffer buffer, int dataLength, int dataCount)

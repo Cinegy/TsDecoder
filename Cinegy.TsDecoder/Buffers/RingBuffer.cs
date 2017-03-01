@@ -85,16 +85,17 @@ namespace Cinegy.TsDecoder.Buffers
             {
                 if (data.Length <= _packetSize)
                 {
-                    //good data size
-                    Buffer.BlockCopy(data, 0, _buffer[_nextAddPos%_bufferSize], 0, data.Length);
-                    _dataLength[_nextAddPos % _bufferSize] = data.Length;
-                    _timestamp[_nextAddPos++] = timestamp;
-
                     if (_nextAddPos > _bufferSize)
                     {
-                        _nextAddPos = (_nextAddPos%_bufferSize);
+                        _nextAddPos = (_nextAddPos%_bufferSize-1);
                         _wrapped = true;
                     }
+                    //good data size
+                    Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
+                    _dataLength[_nextAddPos] = data.Length;
+                    _timestamp[_nextAddPos++] = timestamp;
+
+                   
                     
                 }
                 else
@@ -114,6 +115,11 @@ namespace Cinegy.TsDecoder.Buffers
             {
                 lock (_lockObj)
                 {
+                    if (_lastRemPos > _bufferSize)
+                    {
+                        _lastRemPos = _lastRemPos%_bufferSize - 1;
+                    }
+
                     if (_lastRemPos != _nextAddPos || _wrapped)
                     {
                         if (_wrapped) _wrapped = false;
@@ -149,8 +155,8 @@ namespace Cinegy.TsDecoder.Buffers
         {
             get
             {
-                //todo: make this smarter with internal non-ushort trackers so we don't dump a whole buffer load on overflow
-                return (ushort) (_nextAddPos - _lastRemPos);
+                //todo: double check this after we move from ushort sizing
+                return _nextAddPos - _lastRemPos;
             }
         }
 
