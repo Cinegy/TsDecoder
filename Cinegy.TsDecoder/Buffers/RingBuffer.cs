@@ -26,16 +26,26 @@ namespace Cinegy.TsDecoder.Buffers
         private ulong[] _timestamp;
         private int[] _dataLength;
 
-        private ushort _lastAddPos;
-        private ushort _lastRemPos;
+        private int _nextAddPos;
+        private int _lastRemPos;
+        private bool _wrapped = false;
 
-        private const int PacketSize = 1500;
         private readonly object _lockObj = new object();
+
+        private readonly int _bufferSize = ushort.MaxValue;
+        private readonly int _packetSize = 1500;
 
         private long TimerFreq { get; } = Stopwatch.Frequency/1000;
 
         public RingBuffer()
         {
+            ResetBuffers();
+        }
+
+        public RingBuffer(int bufferSize, int packetSize = 1500)
+        {
+            _bufferSize = bufferSize;
+            _packetSize = packetSize;
             ResetBuffers();
         }
         
@@ -44,13 +54,13 @@ namespace Cinegy.TsDecoder.Buffers
             lock (_lockObj)
             {
                 //allocate buffer and zero
-                _buffer = new byte[ushort.MaxValue + 1][];
-                _timestamp = new ulong[ushort.MaxValue + 1];
-                _dataLength = new int[ushort.MaxValue + 1];
+                _buffer = new byte[_bufferSize + 1][];
+                _timestamp = new ulong[_bufferSize + 1];
+                _dataLength = new int[_bufferSize + 1];
 
-                for (var n = 0; n <= ushort.MaxValue; ++n)
+                for (var n = 0; n <= _bufferSize; ++n)
                 {
-                    _buffer[n] = new byte[PacketSize];
+                    _buffer[n] = new byte[_packetSize];
                 }
             }
         }
@@ -73,16 +83,24 @@ namespace Cinegy.TsDecoder.Buffers
         {
             lock (_lockObj)
             {
-                if (data.Length <= PacketSize)
+                if (data.Length <= _packetSize)
                 {
+                    if (_nextAddPos > _bufferSize)
+                    {
+                        _nextAddPos = (_nextAddPos%_bufferSize-1);
+                        _wrapped = true;
+                    }
                     //good data size
-                    Buffer.BlockCopy(data, 0, _buffer[_lastAddPos], 0, data.Length);
-                    _dataLength[_lastAddPos] = data.Length;
-                    _timestamp[_lastAddPos++] = timestamp;
+                    Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
+                    _dataLength[_nextAddPos] = data.Length;
+                    _timestamp[_nextAddPos++] = timestamp;
+
+                   
+                    
                 }
                 else
                 {
-                    throw new InvalidDataException("Jumbo packets not supported");
+                    throw new InvalidDataException("Data stored is greater than predefined maximum size (jumbo packet?)");
                 }
             }
         }
@@ -97,8 +115,15 @@ namespace Cinegy.TsDecoder.Buffers
             {
                 lock (_lockObj)
                 {
-                    if (_lastRemPos != _lastAddPos)
+                    if (_lastRemPos > _bufferSize)
                     {
+                        _lastRemPos = _lastRemPos%_bufferSize - 1;
+                    }
+
+                    if (_lastRemPos != _nextAddPos || _wrapped)
+                    {
+                        if (_wrapped) _wrapped = false;
+
                         dataLength = _dataLength[_lastRemPos];
                         timestamp = _timestamp[_lastRemPos];
 
@@ -130,9 +155,11 @@ namespace Cinegy.TsDecoder.Buffers
         {
             get
             {
-                //todo: make this smarter with internal non-ushort trackers so we don't dump a whole buffer load on overflow
-                return (ushort) (_lastAddPos - _lastRemPos);
+                //todo: double check this after we move from ushort sizing
+                return _nextAddPos - _lastRemPos;
             }
         }
+
+        public int BufferSize => _bufferSize;
     }
 }
