@@ -156,7 +156,11 @@ namespace Cinegy.TsDecoder.Buffers
             get
             {
                 //todo: double check this after we move from ushort sizing
-                return _nextAddPos - _lastRemPos;
+                var fullness = _nextAddPos - _lastRemPos;
+                if(fullness>-1) return fullness;
+
+                fullness = fullness + _bufferSize + 1; 
+                return fullness;
             }
         }
 
