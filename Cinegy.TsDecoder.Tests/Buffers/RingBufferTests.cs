@@ -112,14 +112,27 @@ namespace Cinegy.TsDecoder.Buffers.Tests
                     CheckBufferFullness(buffer, size - 1);
 
                     FillBufferWithFakeData(buffer, 1316, 1);
+                    //should now be full
+                    CheckBufferFullness(buffer, size);
 
-                    //check with non-standard size buffer
-                    buffer = new RingBuffer(2 ^ 17);
+                    //remove some, check level is size - loop count
+                    var data = new byte[1316];
 
-                    FillBufferWithFakeData(buffer, 1316, 2 ^ 17 - 11);
+                    for (var j = 1; j < 5; j++)
+                    {
+                        int dataLen;
+                        ulong tstamp;
+                        buffer.Remove(ref data, out dataLen, out tstamp);
+                        CheckBufferFullness(buffer, size -j);
+                    }
 
-                    CheckBufferFullness(buffer, 2 ^ 17 - 11);
-                    FillBufferWithFakeData(buffer, 1316, size);
+
+                    for (var j = 1; j < 5; j++)
+                    {
+                        FillBufferWithFakeData(buffer,1316,1);
+                        CheckBufferFullness(buffer, size - 4 + j);
+                    }
+
                 }
                 catch (Exception ex)
                 {
