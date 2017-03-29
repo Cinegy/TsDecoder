@@ -106,9 +106,27 @@ namespace Cinegy.TsDecoder.Buffers
         }
 
         /// <summary>
-        /// Get the oldest element from the ring buffer - blocks if no data is yet available
+        /// Get the any element from the ring buffer without advancing any position elements
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Required size of reference buffer, if passed-in buffer was too small to accomodate data. Otherwise returns zero.</returns>
+        public int Peek(int position, ref byte[] dataBuffer, out int dataLength)
+        {
+            lock (_lockObj)
+            {
+                dataLength = _dataLength[position];
+
+                if (dataBuffer.Length < dataLength)
+                    return dataLength;
+
+                Buffer.BlockCopy(_buffer[position], 0, dataBuffer, 0, dataLength);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Get the oldest element from the ring buffer and advances the removal position - blocks if no data is yet available
+        /// </summary>
+        /// <returns>Required size of reference buffer, if passed-in buffer was too small to accomodate data. Otherwise returns zero.</returns>
         public int Remove(ref byte[] dataBuffer,out int dataLength, out ulong timestamp)
         {
             while(true)
@@ -165,5 +183,15 @@ namespace Cinegy.TsDecoder.Buffers
         }
 
         public int BufferSize => _bufferSize;
+
+        /// <summary>
+        /// Returns the position of the ring-buffer indicating the array position of the next data will be entered into the buffer
+        /// </summary>
+        public int NextAddPosition => _nextAddPos;
+
+        /// <summary>
+        /// Returns the position of the ring-buffer indicating the array position of the last data 'removed' from the buffer
+        /// </summary>
+        public int LastRemovedPosition => _lastRemPos;
     }
 }
