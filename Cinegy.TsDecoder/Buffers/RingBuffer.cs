@@ -28,7 +28,7 @@ namespace Cinegy.TsDecoder.Buffers
 
         private int _nextAddPos;
         private int _lastRemPos;
-        private bool _wrapped = false;
+        private bool _wrapped;
 
         private readonly object _lockObj = new object();
 
@@ -94,9 +94,6 @@ namespace Cinegy.TsDecoder.Buffers
                     Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
                     _dataLength[_nextAddPos] = data.Length;
                     _timestamp[_nextAddPos++] = timestamp;
-
-                   
-                    
                 }
                 else
                 {
@@ -173,12 +170,14 @@ namespace Cinegy.TsDecoder.Buffers
         {
             get
             {
-                //todo: double check this after we move from ushort sizing
-                var fullness = _nextAddPos - _lastRemPos;
-                if(fullness>-1) return fullness;
+                lock (_lockObj)
+                {
+                    var fullness = _nextAddPos - _lastRemPos;
+                    if (fullness > -1) return fullness;
 
-                fullness = fullness + _bufferSize + 1; 
-                return fullness;
+                    fullness = fullness + _bufferSize + 1;
+                    return fullness;
+                }
             }
         }
 
@@ -187,11 +186,29 @@ namespace Cinegy.TsDecoder.Buffers
         /// <summary>
         /// Returns the position of the ring-buffer indicating the array position of the next data will be entered into the buffer
         /// </summary>
-        public int NextAddPosition => _nextAddPos;
+        public int NextAddPosition
+        {
+            get
+            {
+                lock (_lockObj)
+                {
+                    return _nextAddPos;
+                }
+            }
+        }
 
         /// <summary>
         /// Returns the position of the ring-buffer indicating the array position of the last data 'removed' from the buffer
         /// </summary>
-        public int LastRemovedPosition => _lastRemPos;
+        public int LastRemovedPosition
+        {
+            get
+            {
+                lock (_lockObj)
+                {
+                    return _lastRemPos;
+                }
+            }
+        } 
     }
 }
