@@ -1,12 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Cinegy.TsDecoder.Buffers;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Cinegy.TsDecoder.Buffers;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Cinegy.TsDecoder.Buffers.Tests
+namespace Cinegy.TsDecoder.Tests.Buffers
 {
     [TestClass()]
     public class RingBufferTests

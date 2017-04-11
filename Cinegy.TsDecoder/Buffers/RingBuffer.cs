@@ -35,6 +35,8 @@ namespace Cinegy.TsDecoder.Buffers
         private readonly int _bufferSize = ushort.MaxValue;
         private readonly int _packetSize = 1500;
 
+        static EventWaitHandle _waitHandle = new AutoResetEvent(false);
+
         private long TimerFreq { get; } = Stopwatch.Frequency/1000;
 
         public RingBuffer()
@@ -94,6 +96,8 @@ namespace Cinegy.TsDecoder.Buffers
                     Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
                     _dataLength[_nextAddPos] = data.Length;
                     _timestamp[_nextAddPos++] = timestamp;
+
+                    _waitHandle.Set();
                 }
                 else
                 {
@@ -149,7 +153,8 @@ namespace Cinegy.TsDecoder.Buffers
                         return 0;
                     }
                 }
-                Thread.Sleep(1);
+
+                _waitHandle.WaitOne();
             }
         }
 
