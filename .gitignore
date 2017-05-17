@@ -4,3 +4,4 @@ obj
 *.nupkg
 TestResults
 *.user
+/Cinegy.TsDecoder/project.lock.json
