@@ -120,7 +120,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 }
             }
 
-            return Encoding.GetEncoding(characterTable).GetString(Encoding.Convert(Encoding.GetEncoding("ISO-8859-1"), Encoding.GetEncoding(characterTable), ret/*Encoding.UTF8.GetBytes(ret.Substring(start))*/)).Substring(0, ii);
+            return Encoding.GetEncoding(characterTable).GetString(Encoding.Convert(Encoding.GetEncoding(characterTable), Encoding.GetEncoding(characterTable), ret/*Encoding.UTF8.GetBytes(ret.Substring(start))*/)).Substring(0, ii);
         }
     }
 }
