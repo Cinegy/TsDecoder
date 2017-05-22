@@ -19,5 +19,15 @@ namespace Cinegy.TsDecoder.TransportStream
     {
         public int TablePid { get; set; }
         public string Message { get; set; }
+        public TableType TableType { get; set; }
+    }
+
+    public enum TableType
+    {
+        Pat,
+        Pmt,
+        Sdt,
+        Eit,
+        Nit
     }
 }

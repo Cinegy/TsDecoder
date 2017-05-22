@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 using Cinegy.TsDecoder.TransportStream;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

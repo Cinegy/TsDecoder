@@ -1,4 +1,4 @@
-version: 1.0.{build}
+version: 2.0.{build}
 branches:
   only:
   - master
@@ -13,6 +13,8 @@ build:
   project: Cinegy.TsDecoder.sln
   publish_nuget: true
   verbosity: minimal
+before_build:
+- cmd: nuget restore
 after_build:
 - cmd: >-
     7z a Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%.zip %APPVEYOR_BUILD_FOLDER%\Cinegy.TsDecoder\bin\release\Cinegy.TsDecoder.dll
