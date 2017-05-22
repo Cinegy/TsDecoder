@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Cinegy.TsDecoder.Tables;
 
@@ -32,14 +33,40 @@ namespace Cinegy.TsDecoder.TransportStream
         private ProgramAssociationTableFactory _patFactory;
         private ServiceDescriptionTableFactory _sdtFactory;
         private List<ProgramMapTableFactory> _pmtFactories;
-        
 
+        private TsPacketFactory _packetFactory;
 
         public delegate void TableChangeEventHandler(object sender, TableChangedEventArgs args);
 
         public TsDecoder()
         {
             SetupFactories();
+        }
+
+        public void AddData(byte[] data)
+        {
+            if(_packetFactory == null) _packetFactory = new TsPacketFactory();
+
+            var tsPackets = _packetFactory.GetTsPacketsFromData(data);
+
+            if (tsPackets == null)
+            {
+                throw new InvalidDataException("Provided data buffer did not contain any TS packets");
+            }
+
+            foreach (var packet in tsPackets)
+            {
+                AddPacket(packet);
+            }
+
+        }
+
+        public void AddPackets(IEnumerable<TsPacket> newPackets)
+        {
+            foreach (var newPacket in newPackets)
+            {
+                AddPacket(newPacket);
+            }
         }
         
         public void AddPacket(TsPacket newPacket)
@@ -207,7 +234,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 var message =
                     $"SDT {e.TsPid} Refreshed: {name?.ServiceName} - {name?.ServiceProviderName} (Version {ServiceDescriptionTable?.VersionNumber}, Section {ServiceDescriptionTable?.SectionNumber})";
 
-                OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid });
+                OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid, TableType = TableType.Sdt});
             }
             catch(Exception ex)
             {
@@ -239,7 +266,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 ProgramMapTables?.Add(fact.ProgramMapTable);
             }
 
-            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid });
+            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid, TableType = TableType.Pmt});
         }
 
         private void _patFactory_TableChangeDetected(object sender, TransportStreamEventArgs e)
@@ -250,7 +277,7 @@ namespace Cinegy.TsDecoder.TransportStream
             _sdtFactory = new ServiceDescriptionTableFactory();
             _sdtFactory.TableChangeDetected += _sdtFactory_TableChangeDetected;
 
-            OnTableChangeDetected(new TableChangedEventArgs() {Message = "PAT refreshed - resetting all factories" , TablePid = e.TsPid});
+            OnTableChangeDetected(new TableChangedEventArgs() {Message = "PAT refreshed - resetting all factories" , TablePid = e.TsPid, TableType = TableType.Pat});
         }
 
         //A decoded table change has been processed
