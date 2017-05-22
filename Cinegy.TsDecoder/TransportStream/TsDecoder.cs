@@ -28,6 +28,7 @@ namespace Cinegy.TsDecoder.TransportStream
         public ProgramAssociationTable ProgramAssociationTable => _patFactory.ProgramAssociationTable;
         public ServiceDescriptionTable ServiceDescriptionTable => _sdtFactory.ServiceDescriptionTable;
         public NetworkInformationTable NetworkInformationTable => _nitFactory.NetworkInformationTable;
+        public EventInformationTable EventInformationTable => _eitFactory.EventInformationTable;
         public SpliceInfoTable SpliceInfoTable => _sitFactory.SpliceInfoTable;
 
         public List<ProgramMapTable> ProgramMapTables { get; private set; }

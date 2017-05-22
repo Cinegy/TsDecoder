@@ -142,6 +142,8 @@ namespace Cinegy.TsDecoder.Tables
             InProgressTable.Items = items;
 
             EventInformationItems.AddRange(items);
+            
+            if(InProgressTable.VersionNumber == EventInformationTable.VersionNumber) return;
 
             EventInformationTable = InProgressTable;
             _sectionsCompleted.Add(InProgressTable.SectionNumber);
