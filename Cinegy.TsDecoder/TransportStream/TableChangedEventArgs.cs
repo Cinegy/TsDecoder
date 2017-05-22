@@ -24,6 +24,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
     public enum TableType
     {
+        Undefined,
         Pat,
         Pmt,
         Sdt,

@@ -312,7 +312,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
             }
 
-            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid });
+            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid, TableType = TableType.Eit});
         }
 
         private void _nitFactory_TableChangeDetected(object sender, TransportStreamEventArgs e)
@@ -327,7 +327,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
             }
 
-            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid });
+            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid, TableType = TableType.Nit});
         }
 
         //A decoded table change has been processed
