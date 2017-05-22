@@ -27,12 +27,19 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public ProgramAssociationTable ProgramAssociationTable => _patFactory.ProgramAssociationTable;
         public ServiceDescriptionTable ServiceDescriptionTable => _sdtFactory.ServiceDescriptionTable;
+        public NetworkInformationTable NetworkInformationTable => _nitFactory.NetworkInformationTable;
+        public SpliceInfoTable SpliceInfoTable => _sitFactory.SpliceInfoTable;
 
         public List<ProgramMapTable> ProgramMapTables { get; private set; }
         
         private ProgramAssociationTableFactory _patFactory;
         private ServiceDescriptionTableFactory _sdtFactory;
         private List<ProgramMapTableFactory> _pmtFactories;
+
+        private EventInformationTableFactory _eitFactory;
+        private NetworkInformationTableFactory _nitFactory;
+        private SpliceInfoTableFactory _sitFactory;
+        
 
         private TsPacketFactory _packetFactory;
 
@@ -82,6 +89,12 @@ namespace Cinegy.TsDecoder.TransportStream
                         break;
                     case (short)PidType.SdtPid:
                         _sdtFactory.AddPacket(newPacket);
+                        break;
+                    case (short)PidType.EitPid:
+                        _eitFactory.AddPacket(newPacket);
+                        break;
+                    case (short)2048:
+                        _sitFactory.AddPacket(newPacket);
                         break;
                     default:
                         CheckPmt(newPacket);
@@ -159,6 +172,7 @@ namespace Cinegy.TsDecoder.TransportStream
             {
                 //Pid 0x0010 is a NIT packet
                 //TODO: Decode NIT, and store
+                _nitFactory.AddPacket(tsPacket);
                 return;
             }
 
@@ -202,6 +216,14 @@ namespace Cinegy.TsDecoder.TransportStream
 
             _sdtFactory = new ServiceDescriptionTableFactory();
             _sdtFactory.TableChangeDetected += _sdtFactory_TableChangeDetected;
+
+            _eitFactory = new EventInformationTableFactory();
+            _eitFactory.TableChangeDetected += _eitFactory_TableChangeDetected;
+
+            _nitFactory = new NetworkInformationTableFactory();
+            _nitFactory.TableChangeDetected += _nitFactory_TableChangeDetected;
+
+            _sitFactory = new SpliceInfoTableFactory();
         }
 
         public ProgramMapTable GetSelectedPmt(int programNumber)
@@ -278,6 +300,36 @@ namespace Cinegy.TsDecoder.TransportStream
             _sdtFactory.TableChangeDetected += _sdtFactory_TableChangeDetected;
 
             OnTableChangeDetected(new TableChangedEventArgs() {Message = "PAT refreshed - resetting all factories" , TablePid = e.TsPid, TableType = TableType.Pat});
+        }
+
+        private void _eitFactory_TableChangeDetected(object sender, TransportStreamEventArgs e)
+        {
+            string message;
+            lock (this)
+            {
+                var fact = sender as EventInformationTableFactory;
+
+                if (fact == null) return;
+                message = $"EIT {e.TsPid} Refreshed:";
+
+            }
+
+            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid });
+        }
+
+        private void _nitFactory_TableChangeDetected(object sender, TransportStreamEventArgs e)
+        {
+            string message;
+            lock (this)
+            {
+                var fact = sender as NetworkInformationTableFactory;
+
+                if (fact == null) return;
+                message = $"NIT {e.TsPid} Refreshed: (Version {NetworkInformationTable?.VersionNumber}, Section {NetworkInformationTable?.SectionNumber})";
+
+            }
+
+            OnTableChangeDetected(new TableChangedEventArgs() { Message = message, TablePid = e.TsPid });
         }
 
         //A decoded table change has been processed
