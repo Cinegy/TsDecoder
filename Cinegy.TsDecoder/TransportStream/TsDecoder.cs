@@ -40,7 +40,6 @@ namespace Cinegy.TsDecoder.TransportStream
         private NetworkInformationTableFactory _nitFactory;
         private SpliceInfoTableFactory _sitFactory;
         
-
         private TsPacketFactory _packetFactory;
 
         public delegate void TableChangeEventHandler(object sender, TableChangedEventArgs args);
@@ -93,7 +92,7 @@ namespace Cinegy.TsDecoder.TransportStream
                     case (short)PidType.EitPid:
                         _eitFactory.AddPacket(newPacket);
                         break;
-                    case (short)2048:
+                    case 2048:
                         _sitFactory.AddPacket(newPacket);
                         break;
                     default:
@@ -168,10 +167,8 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             if (ProgramAssociationTable == null) return;
 
-            if (tsPacket.Pid == 0x0010)
+            if (tsPacket.Pid == (short)PidType.NitPid)
             {
-                //Pid 0x0010 is a NIT packet
-                //TODO: Decode NIT, and store
                 _nitFactory.AddPacket(tsPacket);
                 return;
             }
@@ -179,6 +176,7 @@ namespace Cinegy.TsDecoder.TransportStream
            // CheckPcr(tsPacket);
 
             var contains = false;
+
             foreach (var pid in ProgramAssociationTable.Pids)
             {
                 if (!Equals(pid, tsPacket.Pid)) continue;
