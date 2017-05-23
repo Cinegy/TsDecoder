@@ -10,13 +10,12 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 {
     [TestClass()]
     public class TsPacketFactoryTests
-    {   
+    {
         [TestMethod()]
         public void GetTsPacketsFromDataTest()
         {
             const string resourceName = "Cinegy.TsDecoder.Tests.TestStreams.SD-H264-1mbps-Bars.ts";
-
-            //const string resourceName = "Cinegy.TsDecoder.Tests.TestStreams.2ts.ts";
+            
             const int expectedPacketCount = 10493;
             var sizes = new List<int> { 188, 376, 512, 564, 1024, 1316, 1500, 2048 };
 
@@ -30,14 +29,18 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         [TestMethod()]
         public void ReadServiceNamesFromDataTest()
         {
-            const string sourceFileName = @"..\..\TestStreams\cut-2ts.ts";
+            ProcessFileForServiceNames(@"..\..\TestStreams\cut-2ts.ts");
+            ProcessFileForServiceNames(@"..\..\TestStreams\cut-bbchd-dvbs2mux.ts");
+        }
 
+        private void ProcessFileForServiceNames(string sourceFileName)
+        {
             const int readFragmentSize = 1316;
 
             var stream = File.Open(sourceFileName, FileMode.Open);
 
             if (stream == null) Assert.Fail("Unable to read test file: " + sourceFileName);
-            
+
             var data = new byte[readFragmentSize];
 
             var readCount = stream.Read(data, 0, readFragmentSize);
@@ -45,12 +48,11 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             var decoder = new TsDecoder.TransportStream.TsDecoder();
 
             decoder.TableChangeDetected += Decoder_TableChangeDetected;
-            
+
             while (readCount > 0)
             {
                 try
                 {
-
                     if (readCount < readFragmentSize)
                     {
                         var tmpArr = new byte[readCount];
@@ -60,34 +62,43 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
                     }
 
                     decoder.AddData(data);
-            
+
+                    if(decoder.ServiceDescriptionTable?.ItemsIncomplete == false)
+                    {
+                        Debug.WriteLine($"Terminating read at position {stream.Position} after detection of embedded service names completed.");
+                        break;
+                    }
+
                     if (stream.Position < stream.Length)
                     {
                         readCount = stream.Read(data, 0, readFragmentSize);
                     }
                     else
                     {
-                        break;
+                        Assert.Fail("Reached end of file without completing SDT scan");
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-
+                    Assert.Fail($"Problem reading file: {ex.Message}");
                 }
             }
         }
 
         private void Decoder_TableChangeDetected(object sender, TableChangedEventArgs args)
         {
-            Debug.WriteLine(args.Message);
+            //filter to SDT events, since we are looking for the SDT to complete
+            if (args.TableType != TableType.Sdt)
+                return;
 
             var decoder = sender as TsDecoder.TransportStream.TsDecoder;
+            
+            if (decoder?.ServiceDescriptionTable?.ItemsIncomplete != false) return;
 
-            if (decoder != null)
+            foreach (var serviceDescriptionItem in decoder.ServiceDescriptionTable.Items)
             {
-                Debug.WriteLine(decoder.ProgramAssociationTable);    
+                Debug.WriteLine(decoder.GetServiceDescriptorForProgramNumber(serviceDescriptionItem.ServiceId).ServiceName);
             }
-
         }
 
         private static void PerformUnalignedDataTest(string resourceName, int expectedPacketCount, int readFragmentSize)

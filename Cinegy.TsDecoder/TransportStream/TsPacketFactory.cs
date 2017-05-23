@@ -118,13 +118,6 @@ namespace Cinegy.TsDecoder.TransportStream
 
 
                                 if (_lastPcr == 0) _lastPcr = tsPacket.AdaptationField.Pcr;
-
-                                var change = ((long)_lastPcr - (long)tsPacket.AdaptationField.Pcr);
-
-                                if ((change) > 2000000)
-                                {
-                                    Debug.WriteLine("Big PCR change");
-                                }
                             }
 
 
