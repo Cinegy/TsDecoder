@@ -62,12 +62,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="TestStreams\SD-H264-1mbps-Bars.ts">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
+    <Content Include="TestStreams\SD-H264-1mbps-Bars.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="TestStreams\cut-2ts.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TestStreams\cut-bbchd-dvbs2mux.ts" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

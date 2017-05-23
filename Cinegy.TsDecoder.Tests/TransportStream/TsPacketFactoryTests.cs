@@ -14,15 +14,15 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         [TestMethod()]
         public void GetTsPacketsFromDataTest()
         {
-            const string resourceName = "Cinegy.TsDecoder.Tests.TestStreams.SD-H264-1mbps-Bars.ts";
+            const string filename = @"..\..\TestStreams\SD-H264-1mbps-Bars.ts";
             
             const int expectedPacketCount = 10493;
             var sizes = new List<int> { 188, 376, 512, 564, 1024, 1316, 1500, 2048 };
 
             foreach (var size in sizes)
             {
-                Console.WriteLine($"Testing file {resourceName} with block size {size}");
-                PerformUnalignedDataTest(resourceName, expectedPacketCount, size);
+                Console.WriteLine($"Testing file {filename} with block size {size}");
+                PerformUnalignedDataTest(filename, expectedPacketCount, size);
             }
         }
 
@@ -101,19 +101,15 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             }
         }
 
-        private static void PerformUnalignedDataTest(string resourceName, int expectedPacketCount, int readFragmentSize)
+        private static void PerformUnalignedDataTest(string filename, int expectedPacketCount, int readFragmentSize)
         {
             try
             {
                 var factory = new TsPacketFactory();
 
                 //load some data from test file
-                var assembly = Assembly.GetExecutingAssembly();
-
-                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                using (var stream = File.Open(filename, FileMode.Open))
                 {
-                    if (stream == null) Assert.Fail("Unable to read test resource: " + resourceName);
-
                     var packetCounter = 0;
 
                     var data = new byte[readFragmentSize];
