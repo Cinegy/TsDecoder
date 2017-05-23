@@ -133,13 +133,21 @@ namespace Cinegy.TsDecoder.Tables
                 item.Descriptors = descriptors;
                 items.Add(item);
             }
-
-            InProgressTable.Items = items;
             
             ServiceDescriptionItems.AddRange(items);
 
             ServiceDescriptionTable = InProgressTable;
+            ServiceDescriptionTable.Items = ServiceDescriptionItems;
+
             _sectionsCompleted.Add(InProgressTable.SectionNumber);
+
+            InProgressTable.ItemsIncomplete = false;
+
+            for(var i = 0;i <= InProgressTable.LastSectionNumber;i++)
+            {
+                if (!_sectionsCompleted.Contains(i))
+                    InProgressTable.ItemsIncomplete = true;
+            }
 
             OnTableChangeDetected();
         }

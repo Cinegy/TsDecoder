@@ -28,6 +28,7 @@ namespace Cinegy.TsDecoder.Tables
         public bool CurrentNextIndicator { get; set; }
         public byte SectionNumber { get; set; }
         public byte LastSectionNumber { get; set; }
+        public bool ItemsIncomplete { get; set; } = true;
         public ushort OriginalNetworkId { get; set; }
         public List<ServiceDescriptionItem> Items { get; set; }
     }
