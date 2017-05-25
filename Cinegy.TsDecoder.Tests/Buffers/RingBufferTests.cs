@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using Cinegy.TsDecoder.Buffers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -23,6 +24,67 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                 {
                     Assert.Fail();
                 }
+            }
+        }
+
+        [TestMethod()]
+        public void OverflowBufferTest()
+        {
+            var dataCount = 12;
+            var dataSize = 1;
+            var returnedDataSize = 0;
+            ulong returnedTimestamp;
+
+            Console.WriteLine($"Testing buffer addition for buffer size {dataCount}");
+            try
+            {
+                var buffer = new RingBuffer(dataCount, 1);
+
+                FillBufferWithFakeData(buffer, dataSize, dataCount + 2);
+            }
+            catch (Exception ex)
+            {
+                if(!(ex is OverflowException))
+                    Assert.Fail($"Failed LoopedBufferTest with buffer size {dataCount} - {ex.Message}");
+            }
+        }
+
+        [TestMethod()]
+        public void JaggedAddTest()
+        {
+            var dataCount = 8;
+            var dataSize = 1;
+            int outDataSize;
+            ulong outTimestamp;
+            
+
+            var data = new byte[dataSize];
+            
+            try
+            {
+                var buffer = new RingBuffer(dataCount,dataSize);
+                
+                for (var i = 1; i < 40; i++)
+                {
+                    data[0] = (byte)i;
+                    buffer.Add(ref data);
+                    buffer.Add(ref data);
+                    buffer.Add(ref data);
+                    buffer.Add(ref data);
+                    buffer.Remove(ref data,out outDataSize, out outTimestamp);
+                    if(data[0]!=i) Assert.Fail("Returned value does not match expected value");
+                    buffer.Remove(ref data, out outDataSize, out outTimestamp);
+                    if (data[0] != i) Assert.Fail("Returned value does not match expected value");
+                    buffer.Remove(ref data, out outDataSize, out outTimestamp);
+                    if (data[0] != i) Assert.Fail("Returned value does not match expected value");
+                    buffer.Remove(ref data, out outDataSize, out outTimestamp);
+                    if (data[0] != i) Assert.Fail("Returned value does not match expected value");
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"Exception in {nameof(JaggedAddTest)}: {ex.Message}");
             }
         }
 
@@ -55,13 +117,13 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                 {
                     var buffer = new RingBuffer(size);
 
-                    FillBufferWithFakeData(buffer, 1316, size + 1);
+                    FillBufferWithFakeData(buffer, 1316, size);
 
                     var data = new byte[1316];
                     int dataLen;
                     ulong tstamp;
 
-                    for (var j = 0; j <= size; j++)
+                    for (var j = 0; j < size; j++)
                     {
                         buffer.Remove(ref data, out dataLen, out tstamp);
                         if (data[0] != j % 256)
@@ -136,28 +198,6 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                     Assert.Fail($"Failed AddTest with buffer size {size} - {ex.Message}");
                 }
             }
-
-
-            //stop here until reimplementing buffer position management (overflow causes wrap now)
-
-            /*
-            CheckBufferFullness(buffer, ushort.MaxValue);
-
-            FillBufferWithFakeData(buffer, 1316, 1);
-
-            CheckBufferFullness(buffer, ushort.MaxValue);
-            
-            FillBufferWithFakeData(buffer, 1316, 10);
-
-            CheckBufferFullness(buffer, ushort.MaxValue);
-
-            var data = new byte[1316];
-            int dataLen;
-            ulong tstamp;
-            buffer.Remove(ref data,out dataLen,out tstamp );
-
-            CheckBufferFullness(buffer, ushort.MaxValue-1);
-            */
         }
 
         private void CheckBufferFullness(RingBuffer buffer, int expectedVal)
