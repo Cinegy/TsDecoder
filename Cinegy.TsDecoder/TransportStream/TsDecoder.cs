@@ -180,7 +180,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
             foreach (var pid in ProgramAssociationTable.Pids)
             {
-                if (!Equals(pid, tsPacket.Pid)) continue;
+                if (pid != tsPacket.Pid) continue;
                 contains = true;
                 break;
             }
