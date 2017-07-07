@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Cinegy.TsDecoder.TransportStream;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -36,7 +37,8 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         [TestMethod()]
         public void ReadEsFromStream()
         {
-            ProcessFileForStreams(@"..\..\TestStreams\D2-TS-20170706-163400.ts");
+            //ProcessFileForStreams(@"D:\Data\OneDrive\Temp\DVBT2-HEVC-EAC3-SHORT.ts");
+            ProcessFileForStreams(@"..\..\TestStreams\D2-TS-HD-AC3-Blue-45mbps.ts");
         }
 
         private void ProcessFileForStreams(string sourceFileName)
@@ -73,14 +75,69 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
                     {
                         foreach(var esStream in decoder.ProgramMapTables[0].EsStreams)
                         {
-                            if(esStream.Descriptors!=null && esStream.Descriptors.Count > 0)
+                            Console.WriteLine($"0x{esStream.ElementaryPid:X4} - {DescriptorDictionaries.ShortElementaryStreamTypeDescriptions[esStream.StreamType]}");
+                            
+                            //only check type 6 privately defined streams
+                            if (esStream.StreamType != 6) continue;
+
+                            var lang = esStream.Descriptors.OfType<Iso639LanguageDescriptor>().FirstOrDefault()?.Language;
+                            
+                            if (esStream.Descriptors.OfType<RegistrationDescriptor>().FirstOrDefault() != null)
                             {
-                                Debug.WriteLine($"Terminating read at position {stream.Position} after detection of a PMT.");
-                                return;
+                                var regDesc = esStream.Descriptors.OfType<RegistrationDescriptor>().First();
+                                var msg = $"0x{esStream.ElementaryPid:X4} - Registered Descriptor: {regDesc.Organization}";
+                                Console.WriteLine(msg);
+                            }
+
+                            if (esStream.Descriptors.OfType<Ac3Descriptor>().FirstOrDefault() != null)
+                            {
+                                var msg = $"0x{esStream.ElementaryPid:X4} - AC3 Audio";
+                                if (!string.IsNullOrWhiteSpace(lang)) msg += $" [{lang}]";
+                                Console.WriteLine(msg);
+                            }
+
+                            if (esStream.Descriptors.OfType<Eac3Descriptor>().FirstOrDefault() != null)
+                            {
+                                var msg = $"0x{esStream.ElementaryPid:X4} - EAC3 Audio";
+                                if (!string.IsNullOrWhiteSpace(lang)) msg += $" [{lang}]";
+                                Console.WriteLine(msg);
+                            }
+
+                            if (esStream.Descriptors.OfType<SubtitlingDescriptor>().FirstOrDefault() != null)
+                            {
+                                var subDesc = esStream.Descriptors.OfType<SubtitlingDescriptor>().First();
+                                var msg = $"0x{esStream.ElementaryPid:X4} - DVB Subtitles";
+                                foreach (var language in subDesc.Languages)
+                                {
+                                    msg += $" [{language.Iso639LanguageCode}/{language.SubtitlingType}]";
+                                }
+                                Console.WriteLine(msg);
+                            }
+
+                            if (esStream.Descriptors.OfType<TeletextDescriptor>().FirstOrDefault() != null)
+                            {
+                                var ttxDesc = esStream.Descriptors.OfType<TeletextDescriptor>().First();
+                                var msg = $"0x{esStream.ElementaryPid:X4} - Teletext Subtitles";
+                                var foundSubs = false;
+                                foreach (var language in ttxDesc.Languages)
+                                {
+                                    if (language.TeletextType != 2) continue;
+                                    var magNum = language.TeletextMagazineNumber;
+                                    if (magNum == 0) magNum = 8;
+                                    msg += $" [{magNum}{language.TeletextPageNumber:X2}-{language.Iso639LanguageCode}/{language.TeletextType}]";
+                                    foundSubs = true;
+                                }
+                                if (foundSubs)
+                                {
+                                    Console.WriteLine(msg);
+                                }
                             }
                         }
-                    }
 
+                        //finished scan
+                        return;
+                    }
+                    
                     if (stream.Position < stream.Length)
                     {
                         readCount = stream.Read(data, 0, readFragmentSize);

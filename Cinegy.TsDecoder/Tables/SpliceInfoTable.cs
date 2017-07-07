@@ -19,18 +19,18 @@ namespace Cinegy.TsDecoder.Tables
     {
        public bool TimeSpecifiedFlag { get; set; }
        public ulong PTSTime { get; set; }
-       public System.String SpliceTimeString {
+       public string SpliceTimeString {
             get {
-                long t_stamp = (long)PTSTime;
-                int hour = (int)(t_stamp / 324000000);
-                long r = t_stamp % 324000000;
-                int minute = (int)(r / 5400000);
+                var t_stamp = (long)PTSTime;
+                var hour = (int)(t_stamp / 324000000);
+                var r = t_stamp % 324000000;
+                var minute = (int)(r / 5400000);
                 r = r % 5400000;
-                int second = (int)(r / 90000);
+                var second = (int)(r / 90000);
                 r = r % 90000;
-                int millis = (int)(r / 90);                
+                var millis = (int)(r / 90);                
 
-                return string.Format("{0:D2}:{1:D2}:{2:D2}.{3:D2}", hour, minute, second, millis);              
+                return $"{hour:D2}:{minute:D2}:{second:D2}.{millis:D2}";              
             }
         }
     }
