@@ -38,7 +38,7 @@ namespace Cinegy.TsDecoder.Tables
 
     public class NetworkInformationItem
     {
-        public static System.String GetNetworkIdName(ushort networkId)
+        public static string GetNetworkIdName(ushort networkId)
         {
             if (networkId >= 0x0000 && networkId <= 0x0000) return "Reserved Reserved";
             if (networkId >= 0x0001 && networkId <= 0x0001) return "Astra Satellite Network 19,2°E Société Européenne des Satellites";
@@ -402,7 +402,7 @@ namespace Cinegy.TsDecoder.Tables
             return "Undefined";
         }
 
-        public static System.String GetOriginalNetworkIdName(ushort networkId)
+        public static string GetOriginalNetworkIdName(ushort networkId)
         {
             if (networkId <= 0x0000 && networkId <= 0x0000) return "(Reserved)	(Reserved)";
             if (networkId <= 0x0001 && networkId <= 0x0001) return "Société Européenne des Satellites	Société Européenne des Satellites";
@@ -747,7 +747,7 @@ namespace Cinegy.TsDecoder.Tables
 
         public ushort TransportStreamId { get; set; }
         public ushort OriginalNetworkId { get; set; }
-        public System.String OriginalNetworkIdString { get { return GetOriginalNetworkIdName(OriginalNetworkId); } }
+        public string OriginalNetworkIdString { get { return GetOriginalNetworkIdName(OriginalNetworkId); } }
         public byte ReservedFutureUse { get; set; }
         public ushort TransportDescriptorsLength { get; set; }
         public IEnumerable<Descriptor> Descriptors { get; set; }

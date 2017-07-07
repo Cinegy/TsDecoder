@@ -70,6 +70,9 @@
   <ItemGroup>
     <Content Include="TestStreams\cut-bbchd-dvbs2mux.ts" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="TestStreams\D2-TS-HD-AC3-Blue-45mbps.ts" />
+  </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

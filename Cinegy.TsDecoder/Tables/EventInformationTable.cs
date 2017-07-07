@@ -37,10 +37,10 @@ namespace Cinegy.TsDecoder.Tables
 
     public class EventInformationItem
     {
-        public static String[] RunningStatusDescription = new String[] { "undefined", "not running", "Starts in a few seconds", "pausing", "running", "reserved for future use", "reserved for future use" };
-        public UInt16 EventId { get; set; }// 16     uimsbf
-        public UInt64 StartTime { get; set; }// 40     bslbf
-        public String StartTimeString
+        public static string[] RunningStatusDescription = new string[] { "undefined", "not running", "Starts in a few seconds", "pausing", "running", "reserved for future use", "reserved for future use" };
+        public ushort EventId { get; set; }// 16     uimsbf
+        public ulong StartTime { get; set; }// 40     bslbf
+        public string StartTimeString
         {
             get
             {
@@ -54,13 +54,13 @@ namespace Cinegy.TsDecoder.Tables
                 y = y + k + 1900;
                 m = m - 1 - k * 12;
 
-                return String.Format("{3,00}-{4,00}-{5,00} {0:x}:{1:x}:{2:x}", ((StartTime >> 16) & 0xFF), ((StartTime >> 8) & 0xFF), (StartTime & 0xFF), y, m, d, 0);
+                return string.Format("{3,00}-{4,00}-{5,00} {0:x}:{1:x}:{2:x}", ((StartTime >> 16) & 0xFF), ((StartTime >> 8) & 0xFF), (StartTime & 0xFF), y, m, d, 0);
             }
         }
         public uint Duration { get; set; }// 24     uimsbf
-        public String DurationString { get { return String.Format("{0:x}:{1:x}:{2:x}", ((Duration >> 16) & 0xFF), ((Duration >> 8) & 0xFF), (Duration & 0xFF)); } }
+        public string DurationString { get { return string.Format("{0:x}:{1:x}:{2:x}", ((Duration >> 16) & 0xFF), ((Duration >> 8) & 0xFF), (Duration & 0xFF)); } }
         public byte RunningStatus { get; set; }// 3     uimsbf
-        public String RunningStatusString { get { return RunningStatusDescription[RunningStatus]; } }// 3     uimsbf
+        public string RunningStatusString { get { return RunningStatusDescription[RunningStatus]; } }// 3     uimsbf
         public bool FreeCAMode { get; set; }// 1     bslbf
         public ushort DescriptorsLoopLength { get; set; }// 12     uimsbf
         public IEnumerable<Descriptor> Descriptors { get; set; }
