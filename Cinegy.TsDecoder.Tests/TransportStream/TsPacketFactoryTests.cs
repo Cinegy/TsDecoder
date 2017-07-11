@@ -54,9 +54,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             var readCount = stream.Read(data, 0, readFragmentSize);
 
             var decoder = new TsDecoder.TransportStream.TsDecoder();
-
-            decoder.TableChangeDetected += Decoder_TableChangeDetected;
-
+            
             while (readCount > 0)
             {
                 try

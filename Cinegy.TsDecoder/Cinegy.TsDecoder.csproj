@@ -57,6 +57,7 @@
     <Compile Include="Tables\SpliceInfoTableFactory.cs" />
     <Compile Include="Tables\Table.cs" />
     <Compile Include="Tables\TableFactory.cs" />
+    <Compile Include="TransportStream\CinegyDescriptor.cs" />
     <Compile Include="TransportStream\Descriptor.cs" />
     <Compile Include="TransportStream\DescriptorDictionaries.cs" />
     <Compile Include="TransportStream\EsInfo.cs" />

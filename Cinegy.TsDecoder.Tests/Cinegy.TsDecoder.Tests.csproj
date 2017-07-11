@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="Buffers\RingBufferTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TransportStream\DescriptorTests.cs" />
     <Compile Include="TransportStream\TsPacketFactoryTests.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -72,6 +73,15 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="TestStreams\D2-TS-HD-AC3-Blue-45mbps.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TestStreams\11720-2017-07-09-16-01-43.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="TestDescriptors\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="TestStreams\11954-2017-07-09-16-05-06.ts" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

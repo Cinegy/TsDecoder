@@ -13,6 +13,7 @@
   limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -24,20 +25,41 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             DescriptorTag = stream[start];
             DescriptorLength = stream[start + 1];
+            Data = new byte[DescriptorLength];
+            Buffer.BlockCopy(stream, start + 2, Data, 0, DescriptorLength);
         }
+
         public byte DescriptorTag { get; }
         public byte DescriptorLength { get; }
+        public byte[] Data { get; }
+
+        public string LongName { get
+            {
+                return DescriptorDictionaries.DescriptorTypeDescriptions[DescriptorTag];
+            }
+        }
+
+        public string Name { get
+            {
+                return DescriptorDictionaries.DescriptorTypeShortDescriptions[DescriptorTag];
+            }
+        }
+ 
+        public override string ToString()
+        {
+            return $"(0x{DescriptorTag:x2}): {Name}, Length: {DescriptorLength}";
+        }
     }
 
     public class TeletextDescriptor : Descriptor
     {
         public static Dictionary<byte, string> TeletextTypes = new Dictionary<byte, string>(){
-            {0x00 , "reserved for future use"},
-            {0x01 ,  "initial Teletext page"},
-            {0x02 ,  "Teletext subtitle page"},
-            {0x03 ,  "additional information page"},
-            {0x04 ,  "programme schedule page"},
-            {0x05 ,  "Teletext subtitle page for hearing impaired people"},
+            {0x00, "reserved for future use"},
+            {0x01, "initial Teletext page"},
+            {0x02, "Teletext subtitle page"},
+            {0x03, "additional information page"},
+            {0x04, "programme schedule page"},
+            {0x05, "Teletext subtitle page for hearing impaired people"},
             {0x07, "reserved for future use"},
             {0x08, "reserved for future use"},
             {0x09, "reserved for future use"},
@@ -100,26 +122,31 @@ namespace Cinegy.TsDecoder.TransportStream
                 TeletextPageNumber = lang.TeletextPageNumber;
             }
 
-            public string Iso639LanguageCode { get; set; }
-            public byte TeletextType { get; set; }
-            public byte TeletextMagazineNumber { get; set; }
-            public byte TeletextPageNumber { get; set; }
+            public string Iso639LanguageCode { get; internal set; }
+            public byte TeletextType { get; internal set; }
+            public byte TeletextMagazineNumber { get; internal set; }
+            public byte TeletextPageNumber { get; internal set; }
         }
-        public IEnumerable<Language> Languages { get; set; }        
+        public IEnumerable<Language> Languages { get; }        
     }
 
     public class RegistrationDescriptor : Descriptor
     {
         //ISO/IEC 13818-1:2007 Table 2-51
-
         public RegistrationDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            if ((stream.Length - start - 2) > DescriptorLength)
+            var idx = start + 2; //start + desc tag byte + desc len byte 
+
+            if ((stream.Length - idx - 4) > DescriptorLength)
             {
-                Organization = Encoding.UTF8.GetString(stream, start + 2, DescriptorLength);
+                Organization = Encoding.UTF8.GetString(stream, idx+=4, 4);
+                AdditionalIdentificationInfo = new byte[DescriptorLength - 6];
+                Buffer.BlockCopy(stream, idx, AdditionalIdentificationInfo, 0, AdditionalIdentificationInfo.Length);
             }
         }
-        public string Organization { get; set; }
+        public string Organization { get; }
+
+        public byte[] AdditionalIdentificationInfo { get; }
     }
 
     public class StreamIdentifierDescriptor : Descriptor
@@ -129,7 +156,7 @@ namespace Cinegy.TsDecoder.TransportStream
             ComponentTag = stream[start + 2];
         }
 
-        public byte ComponentTag { get; set; }
+        public byte ComponentTag { get; }
     }
 
     public class Iso639LanguageDescriptor : Descriptor
@@ -140,8 +167,8 @@ namespace Cinegy.TsDecoder.TransportStream
             AudioType = stream[start + 5];
         }
 
-        public string Language { get; set; }
-        public byte AudioType { get; set; }
+        public string Language { get; }
+        public byte AudioType { get; }
     }
 
     public class SubtitlingDescriptor : Descriptor
@@ -170,12 +197,12 @@ namespace Cinegy.TsDecoder.TransportStream
         }
         public class Language
         {
-            public string Iso639LanguageCode { get; set; }
-            public byte SubtitlingType { get; set; }
-            public ushort CompositionPageId { get; set; }
-            public ushort AncillaryPageId { get; set; }
+            public string Iso639LanguageCode { get; internal set; }
+            public byte SubtitlingType { get; internal set; }
+            public ushort CompositionPageId { get; internal set; }
+            public ushort AncillaryPageId { get; internal set; }
         }
-        public IEnumerable<Language> Languages { get; set; }
+        public IEnumerable<Language> Languages { get; }
     }
 
     public class DataBroadcastIdDescriptor : Descriptor
@@ -185,7 +212,7 @@ namespace Cinegy.TsDecoder.TransportStream
             DataBroadcastId = (ushort)((stream[start + 2] << 8) + stream[start + 3]);
         }
 
-        public ushort DataBroadcastId { get; set; }
+        public ushort DataBroadcastId { get; }
     }
 
     public class ServiceListDescriptor : Descriptor
@@ -232,8 +259,8 @@ namespace Cinegy.TsDecoder.TransportStream
                 ServiceType = service.ServiceType;
             }
 
-            public ushort ServiceId { get; set; }
-            public byte ServiceType { get; set; }
+            public ushort ServiceId { get; internal set; }
+            public byte ServiceType { get; internal set; }
             public string ServiceTypeString => ServiceTypeDescription(ServiceType);
         }
         
@@ -254,7 +281,7 @@ namespace Cinegy.TsDecoder.TransportStream
             }
             Services = services;
         }
-        public IEnumerable<Service> Services { get; set; }
+        public IEnumerable<Service> Services { get; }
 
     }
 
@@ -316,12 +343,12 @@ namespace Cinegy.TsDecoder.TransportStream
             ServiceNameLength = stream[start + 4 + ServiceProviderNameLength];
             ServiceName = new Text(stream, start + 4 + ServiceProviderNameLength + 1, ServiceNameLength);//new Text(System.Text.Encoding.UTF8.GetString(stream, start + 4 + ServiceProviderNameLength + 1, ServiceNameLength));
         }
-        public byte ServiceType { get; set; }//8 uimsbf
+        public byte ServiceType { get; }//8 uimsbf
         public string ServiceTypeDescription => GetServiceTypeDescription(ServiceType);
-        public byte ServiceProviderNameLength { get; set; }// 8 uimsbf
-        public Text ServiceProviderName { get; set; }// 
-        public byte ServiceNameLength { get; set; }// 8 uimsbf 
-        public Text ServiceName { get; set; }      
+        public byte ServiceProviderNameLength { get; }// 8 uimsbf
+        public Text ServiceProviderName { get; }// 
+        public byte ServiceNameLength { get; }// 8 uimsbf 
+        public Text ServiceName { get; }      
     }
 
     public class ExtendedEventDescriptor : Descriptor
@@ -336,10 +363,10 @@ namespace Cinegy.TsDecoder.TransportStream
                 ItemLength = item.ItemLength;
                 ItemChar = new Text(item.ItemChar);
             }
-            public byte ItemDescriptionLength { get; set; }
-            public Text ItemDescriptionChar { get; set; }
-            public byte ItemLength { get; set; }
-            public Text ItemChar { get; set; }
+            public byte ItemDescriptionLength { get; internal set; }
+            public Text ItemDescriptionChar { get; internal set; }
+            public byte ItemLength { get; internal set; }
+            public Text ItemChar { get; internal set; }
         }
         
         public ExtendedEventDescriptor(byte[] stream, int start) : base(stream, start)
@@ -365,13 +392,13 @@ namespace Cinegy.TsDecoder.TransportStream
             TextChar = new Text(stream, startOfItem + 1, TextLength);
         }
 
-        public byte DescriptorNumber { get; set; }
-        public byte LastDescriptorNumber { get; set; }
-        public string ISO639LanguageCode { get; set; }
-        public byte LengthOfItems { get; set; }
-        public IEnumerable<Item> Items { get; set; }
-        public byte TextLength { get; set; }
-        public Text TextChar { get; set; }
+        public byte DescriptorNumber { get; }
+        public byte LastDescriptorNumber { get; }
+        public string ISO639LanguageCode { get; }
+        public byte LengthOfItems { get; }
+        public IEnumerable<Item> Items { get; }
+        public byte TextLength { get; }
+        public Text TextChar { get; }
     }
 
     public class ShortEventDescriptor : Descriptor
@@ -384,11 +411,11 @@ namespace Cinegy.TsDecoder.TransportStream
             TextLength = stream[start + 6 + EventNameLength];
             TextChar = new Text(stream, start + 6 + EventNameLength + 1, TextLength); 
         }
-        public string ISO639LanguageCode { get; set; }
-        public byte EventNameLength { get; set; }     
-        public Text EventNameChar { get; set; }     
-        public byte TextLength { get; set; }     
-        public Text TextChar { get; set; }   
+        public string ISO639LanguageCode { get; }
+        public byte EventNameLength { get; }     
+        public Text EventNameChar { get; }     
+        public byte TextLength { get; }     
+        public Text TextChar { get; }   
     }
 
     public class ComponentDescriptor : Descriptor
@@ -606,12 +633,12 @@ namespace Cinegy.TsDecoder.TransportStream
         }
 
 
-        public byte StreamContentExt { get; set; } 
-        public byte StreamContent { get; set; } 
-        public byte ComponentType { get; set; } 
-        public byte ComponentTag { get; set; } 
-        public string ISO639LanguageCode { get; set; } 
-        public Text TextChar { get; set; } 
+        public byte StreamContentExt { get; } 
+        public byte StreamContent { get; } 
+        public byte ComponentType { get; } 
+        public byte ComponentTag { get; } 
+        public string ISO639LanguageCode { get; } 
+        public Text TextChar { get; } 
         public string ComponentDescription => GetComponentDescription(StreamContent, StreamContentExt, ComponentType);
     }
 
@@ -666,21 +693,21 @@ namespace Cinegy.TsDecoder.TransportStream
             FECInner = (byte)(stream[start + 12] & 0x0F);
         }
 
-        public string Frequency { get; set; }
+        public string Frequency { get; }
         public string FrequencyString => string.Format("{0} GHz", Frequency.Insert(3, ","));
-        public string OrbitalPosition { get; set; }
+        public string OrbitalPosition { get; }
         public string OrbitalPositionString => string.Format("{0} deg", OrbitalPosition.Insert(3, ","));
-        public bool WestEastFlag { get; set; }
-        public byte Polarization { get; set; }
-        public byte RollOff { get; set; }
+        public bool WestEastFlag { get; }
+        public byte Polarization { get; }
+        public byte RollOff { get; }
         public string RollOffString => RoleOffDescription[RollOff];
         public string PolarizationString => PolarizationDescription[Polarization];
-        public bool ModulationSystem { get; set; }
+        public bool ModulationSystem { get; }
         public string ModulationSystemString => ModulationSystem ? "S2" : "S";
-        public byte Modulation { get; set; }
+        public byte Modulation { get; }
         public string ModulationString => ModulationDescription(Modulation);
-        public string SymbolRate { get; set; }
-        public byte FECInner { get; set; }
+        public string SymbolRate { get; }
+        public byte FECInner { get; }
         public string FECInnerString => FECInnerDescription(FECInner);
     }
 
@@ -696,7 +723,7 @@ namespace Cinegy.TsDecoder.TransportStream
             }
             NetworkName = Encoding.UTF8.GetString(stream, startOfName, DescriptorLength - (startOfName - start) + 2);
         }
-        public string NetworkName { get; set; }
+        public string NetworkName { get; }
     }
 
     public class TerrestrialDeliverySystemDescriptor : Descriptor
@@ -723,23 +750,23 @@ namespace Cinegy.TsDecoder.TransportStream
             ReservedFutureUse2 = (uint)((stream[start + 9] << 24) + (stream[start + 10] << 16) + (stream[start + 11] << 8) + (stream[start + 12]));
         }
 
-        public uint CentreFrequency { get; set; }
-        public byte Bandwidth { get; set; }
+        public uint CentreFrequency { get; }
+        public byte Bandwidth { get; }
         public string BandwidthString => BandwidthDescription[Bandwidth];
-        public byte ReservedFutureUse { get; set; }
-        public byte Constellation { get; set; }
+        public byte ReservedFutureUse { get; }
+        public byte Constellation { get; }
         public string ConstellationString => ConstellationDescription[Constellation];
-        public byte HierarchyInformation { get; set; }
+        public byte HierarchyInformation { get; }
         public string HierarchyInformationString => HierarchyInformationDescription[HierarchyInformation];
-        public byte CodeRateHPStream { get; set; }
+        public byte CodeRateHPStream { get; }
         public string CodeRateHPStreamString => CodeRateDescription[CodeRateHPStream];
-        public byte CodeRateLPStream { get; set; }
+        public byte CodeRateLPStream { get; }
         public string CodeRateLPStreamString => CodeRateDescription[CodeRateLPStream];
-        public byte GuardInterval { get; set; }
+        public byte GuardInterval { get; }
         public string GuardIntervalString => GuardIntervalDescription[GuardInterval];
-        public byte TransmissionMode { get; set; }
-        public bool OtherFrequencyFlag { get; set; }
-        public uint ReservedFutureUse2 { get; set; }
+        public byte TransmissionMode { get; }
+        public bool OtherFrequencyFlag { get; }
+        public uint ReservedFutureUse2 { get; }
     }
 
     public class CueIdentifierDescriptor : Descriptor
@@ -765,7 +792,7 @@ namespace Cinegy.TsDecoder.TransportStream
             CueStreamType = stream[start + 2];
         }
 
-        public byte CueStreamType { get; set; }
+        public byte CueStreamType { get; }
         public string CueStreamTypeString => CueStreamTypeDescription(CueStreamType);
     }
 
@@ -773,7 +800,6 @@ namespace Cinegy.TsDecoder.TransportStream
 
     public class Ac3Descriptor : Descriptor
     {
-        //note - does not yet read the flagged bytes
         /*
            * AC-3_descriptor()
            * {    
@@ -796,24 +822,34 @@ namespace Cinegy.TsDecoder.TransportStream
            *      { 8 uimsbf   additional_info_byte    }   }
         */
 
-        public bool ComponentTypeFlag { get; set; }
-        public bool BsIdFlag { get; set; }
-        public bool MainIdFlag { get; set; }
-        public bool AsvcFlag { get; set; }
+        public bool ComponentTypeFlag { get; }
+        public bool BsIdFlag { get; }
+        public bool MainIdFlag { get; }
+        public bool AsvcFlag { get; }
+
+        public byte ComponentType { get; }
+        public byte BsId { get; }
+        public byte MainId { get; }
+        public byte Asvc { get; }
 
         public Ac3Descriptor(byte[] stream, int start)
             : base(stream, start)
         {
-            ComponentTypeFlag = (stream[start + 2] & 0x80) == 0x80;
-            BsIdFlag = (stream[start + 2] & 0x40) == 0x40;
-            MainIdFlag = (stream[start + 2] & 0x20) == 0x20;
-            AsvcFlag = (stream[start + 2] & 0x10) == 0x10;
+            var idx = start + 2;
+            ComponentTypeFlag = (stream[idx] & 0x80) == 0x80;
+            BsIdFlag = (stream[idx] & 0x40) == 0x40;
+            MainIdFlag = (stream[idx] & 0x20) == 0x20;
+            AsvcFlag = (stream[idx++] & 0x10) == 0x10;
+
+            if (ComponentTypeFlag) ComponentType = stream[idx++];
+            if (BsIdFlag) BsId = stream[idx++];
+            if (MainIdFlag) MainId = stream[idx++];
+            if (AsvcFlag) Asvc = stream[idx++];
         }
     }
 
     public class Eac3Descriptor : Descriptor
     {
-        //note - does not yet read the flagged bytes
         /*
            * EAC-3_descriptor()
            * {    
@@ -843,31 +879,47 @@ namespace Cinegy.TsDecoder.TransportStream
            *      { 8 uimsbf   substream3    }  
            *  for(i=0;i<N;i++)
            *      { 8 uimsbf   additional_info_byte    }   }
-           *  
-           *      
-        
         */
 
-        public bool ComponentTypeFlag { get; set; }
-        public bool BsIdFlag { get; set; }
-        public bool MainIdFlag { get; set; }
-        public bool AsvcFlag { get; set; }
-        public bool MixInfoExists { get; set; }
-        public bool Substream1Flag { get; set; }
-        public bool Substream2Flag { get; set; }
-        public bool Substream3Flag { get; set; }
+        public bool ComponentTypeFlag { get; }
+        public bool BsIdFlag { get; }
+        public bool MainIdFlag { get; }
+        public bool AsvcFlag { get; }
+        public bool MixInfoExists { get; }
+        public bool Substream1Flag { get; }
+        public bool Substream2Flag { get; }
+        public bool Substream3Flag { get; }
+        public byte ComponentType { get; }
+        public byte BsId { get; }
+        public byte MainId { get; }
+        public byte Asvc { get; }
+        public byte Substream1 { get; }
+        public byte Substream2 { get; }
+        public byte Substream3 { get; }
 
         public Eac3Descriptor(byte[] stream, int start)
             : base(stream, start)
         {
-            ComponentTypeFlag = (stream[start + 2] & 0x80) == 0x80;
-            BsIdFlag = (stream[start + 2] & 0x40) == 0x40;
-            MainIdFlag = (stream[start + 2] & 0x20) == 0x20;
-            AsvcFlag = (stream[start + 2] & 0x10) == 0x10;
-            MixInfoExists = (stream[start + 2] & 0x08) == 0x08;
-            Substream1Flag = (stream[start + 2] & 0x04) == 0x04;
-            Substream2Flag = (stream[start + 2] & 0x02) == 0x02;
-            Substream3Flag = (stream[start + 2] & 0x01) == 0x01;
+
+            var idx = start + 2;
+            ComponentTypeFlag = (stream[idx] & 0x80) == 0x80;
+            BsIdFlag = (stream[idx] & 0x40) == 0x40;
+            MainIdFlag = (stream[idx] & 0x20) == 0x20;
+            AsvcFlag = (stream[idx] & 0x10) == 0x10;
+            MixInfoExists = (stream[idx] & 0x08) == 0x08;
+            Substream1Flag = (stream[idx] & 0x04) == 0x04;
+            Substream2Flag = (stream[idx] & 0x02) == 0x02;
+            Substream3Flag = (stream[idx++] & 0x01) == 0x01;
+
+            if (ComponentTypeFlag) ComponentType = stream[idx++];
+            if (BsIdFlag) BsId = stream[idx++];
+            if (MainIdFlag) MainId = stream[idx++];
+            if (AsvcFlag) Asvc = stream[idx++];
+
+            if (Substream1Flag) Substream1 = stream[idx++];
+            if (Substream2Flag) Substream2 = stream[idx++];
+            if (Substream3Flag) Substream3 = stream[idx++];
+
         }
     }
 
@@ -877,7 +929,9 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             switch (stream[start])
             {
-                case 0x05: return new RegistrationDescriptor(stream, start); 
+                case 0x05:
+                    var regDesc = new RegistrationDescriptor(stream, start);
+                    if (regDesc.Organization == "2LND") return new CinegyDescriptor(stream, start); else return regDesc;
                 case 0x0a: return new Iso639LanguageDescriptor(stream, start);
                 case 0x40: return new NetworkNameDescriptor(stream, start);
                 case 0x41: return new ServiceListDescriptor(stream, start);
