@@ -137,12 +137,13 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             var idx = start + 2; //start + desc tag byte + desc len byte 
 
-            if ((stream.Length - idx - 4) > DescriptorLength)
-            {
-                Organization = Encoding.UTF8.GetString(stream, idx+=4, 4);
-                AdditionalIdentificationInfo = new byte[DescriptorLength - 6];
-                Buffer.BlockCopy(stream, idx, AdditionalIdentificationInfo, 0, AdditionalIdentificationInfo.Length);
-            }
+            //TODO: double check this is actually a correct test...
+            if ((stream.Length - idx - 4) <= DescriptorLength) return;
+            Organization = Encoding.ASCII.GetString(stream, idx, 4);
+            idx += 4;
+            if (DescriptorLength <= 4) return;
+            AdditionalIdentificationInfo = new byte[DescriptorLength - 4];
+            Buffer.BlockCopy(stream, idx, AdditionalIdentificationInfo, 0, AdditionalIdentificationInfo.Length);
         }
         public string Organization { get; }
 

@@ -10,7 +10,7 @@ namespace Cinegy.TsDecoder.TransportStream
     {
         public CinegyDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            if (AdditionalIdentificationInfo.Length >= 2)
+            if (AdditionalIdentificationInfo?.Length >= 2)
             {
                 switch (AdditionalIdentificationInfo[0])
                 {
