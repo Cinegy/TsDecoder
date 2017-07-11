@@ -84,11 +84,6 @@ namespace Cinegy.TsDecoder.TransportStream
                 {
                     return;
                 }
-                if (newPacket.Pid != 8191 && newPacket.Pid != 4096 && newPacket.Pid != 4097)
-                {
-                    //non D2 pid
-                    Debug.WriteLine(newPacket.Pid);    
-                }
 
                 switch (newPacket.Pid)
                 {

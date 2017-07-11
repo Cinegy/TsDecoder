@@ -63,7 +63,15 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
                                 foreach (var desc in esStream.Descriptors)
                                 {
-                                    Console.WriteLine($"\t {desc}");
+                                    if (desc is ExtendedEventDescriptor)
+                                    {
+                                        var extDesc = desc as ExtendedEventDescriptor;
+                                        Console.WriteLine($"{extDesc.TextChar.Value}");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"\t {desc}");
+                                    }
                                 }
                             }
                         }

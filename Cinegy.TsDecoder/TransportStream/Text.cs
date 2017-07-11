@@ -34,12 +34,16 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public Text(byte[] inputChars, int start, int length)
         {
-            _characters = new byte[length];
+            if (null == inputChars || inputChars.Length <= start) return;
 
-            if (null == inputChars || inputChars.Length <= start || inputChars.Length <= length + start) return;
+            if (inputChars.Length <= length + start)
+            {
+                length = inputChars.Length - start;
+            }
 
             try
             {
+                _characters = new byte[length];
                 Buffer.BlockCopy(inputChars, start, _characters, 0, length);
             }
             catch (Exception ex)
@@ -120,7 +124,8 @@ namespace Cinegy.TsDecoder.TransportStream
                 }
             }
 
-            return Encoding.GetEncoding(characterTable).GetString(Encoding.Convert(Encoding.GetEncoding(characterTable), Encoding.GetEncoding(characterTable), ret/*Encoding.UTF8.GetBytes(ret.Substring(start))*/)).Substring(0, ii);
+            var result = Encoding.GetEncoding(characterTable).GetString(Encoding.Convert(Encoding.GetEncoding(characterTable), Encoding.GetEncoding(characterTable), ret/*Encoding.UTF8.GetBytes(ret.Substring(start))*/)).Substring(0, ii);
+            return result;
         }
     }
 }

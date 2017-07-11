@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace Cinegy.TsDecoder.TransportStream
@@ -25,8 +26,16 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             DescriptorTag = stream[start];
             DescriptorLength = stream[start + 1];
-            Data = new byte[DescriptorLength];
-            Buffer.BlockCopy(stream, start + 2, Data, 0, DescriptorLength);
+
+            if (stream.Length - start - 2 >= DescriptorLength)
+            {
+                Data = new byte[DescriptorLength];
+                Buffer.BlockCopy(stream, start + 2, Data, 0, DescriptorLength);
+            }
+            else
+            {
+                Debug.WriteLine($"Descriptor has length beyond packet {Name} - {DescriptorTag}.");
+            }
         }
 
         public byte DescriptorTag { get; }
@@ -137,10 +146,10 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             var idx = start + 2; //start + desc tag byte + desc len byte 
 
-            //TODO: double check this is actually a correct test...
-            if ((stream.Length - idx - 4) <= DescriptorLength) return;
+            if ((stream.Length - idx) <= DescriptorLength) return;
             Organization = Encoding.ASCII.GetString(stream, idx, 4);
             idx += 4;
+
             if (DescriptorLength <= 4) return;
             AdditionalIdentificationInfo = new byte[DescriptorLength - 4];
             Buffer.BlockCopy(stream, idx, AdditionalIdentificationInfo, 0, AdditionalIdentificationInfo.Length);
@@ -391,6 +400,7 @@ namespace Cinegy.TsDecoder.TransportStream
             Items = items;
             TextLength = stream[startOfItem];
             TextChar = new Text(stream, startOfItem + 1, TextLength);
+            Debug.WriteLine(TextChar);
         }
 
         public byte DescriptorNumber { get; }
