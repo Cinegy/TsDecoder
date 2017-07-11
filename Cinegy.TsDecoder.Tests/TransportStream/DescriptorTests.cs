@@ -77,7 +77,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
                     }
                     else
                     {
-                        Assert.Fail("Reached end of file without completing SDT scan");
+                        Assert.Fail("Reached end of file without completing descriptor scan");
                     }
                 }
                 catch (Exception ex)
