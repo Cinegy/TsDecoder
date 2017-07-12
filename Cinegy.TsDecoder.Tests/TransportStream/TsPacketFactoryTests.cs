@@ -83,7 +83,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
                             if (esStream.Descriptors.OfType<RegistrationDescriptor>().FirstOrDefault() != null)
                             {
                                 var regDesc = esStream.Descriptors.OfType<RegistrationDescriptor>().First();
-                                var msg = $"0x{esStream.ElementaryPid:X4} - Registered Descriptor: {regDesc.Organization}";
+                                var msg = $"0x{esStream.ElementaryPid:X4} - {regDesc.Name} Descriptor: {regDesc.Organization}";
                                 Console.WriteLine(msg);
                             }
 

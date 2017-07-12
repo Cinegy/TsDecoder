@@ -42,9 +42,9 @@ namespace Cinegy.TsDecoder.TransportStream
         public byte DescriptorLength { get; }
         public byte[] Data { get; }
 
-        public string LongName => DescriptorDictionaries.DescriptorTypeDescriptions[DescriptorTag];
+        public virtual string LongName => DescriptorDictionaries.DescriptorTypeDescriptions[DescriptorTag];
 
-        public string Name => DescriptorDictionaries.DescriptorTypeShortDescriptions[DescriptorTag];
+        public virtual string Name => DescriptorDictionaries.DescriptorTypeShortDescriptions[DescriptorTag];
 
         public override string ToString()
         {
@@ -1184,7 +1184,15 @@ public static class DescriptorFactory
             {
                 case 0x05:
                     var regDesc = new RegistrationDescriptor(stream, start);
-                    return regDesc.Organization == "2LND" ? new CinegyDescriptor(stream, start) : regDesc;
+                    switch (regDesc.Organization)
+                    {
+                        case "2LND":
+                            return new CinegyDaniel2Descriptor(stream,start);
+                        case "CNGY":
+                            return new CinegyTechMetadataDescriptor(stream,start);
+                        default:
+                            return regDesc;
+                    }
                 case 0x0a: return new Iso639LanguageDescriptor(stream, start);
                 case 0x40: return new NetworkNameDescriptor(stream, start);
                 case 0x41: return new ServiceListDescriptor(stream, start);

@@ -1,85 +1,111 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace Cinegy.TsDecoder.TransportStream
 {
-    public class CinegyDescriptor : RegistrationDescriptor //if format-identifier / organization tag == 2LND (proposed to change to CNGY)
+    public class CinegyDaniel2Descriptor : RegistrationDescriptor //if format-identifier / organization tag == 2LND
     {
-        public CinegyDescriptor(byte[] stream, int start) : base(stream, start)
+        public CinegyDaniel2Descriptor(byte[] stream, int start) : base(stream, start)
         {
-            if (AdditionalIdentificationInfo?.Length >= 2)
-            {
-                switch (AdditionalIdentificationInfo[0])
-                {
-                    case (0x01): //D2 Video sub-descriptor
-                        SubDescriptor = new CinegyDaniel2SubDescriptor(AdditionalIdentificationInfo);
-                        break;
-                    case (0x02): //Technical Metadata sub-descriptor
-                        SubDescriptor = new CinegyTechMetadataSubDescriptor(AdditionalIdentificationInfo);
-                        break;
-                }
-            }
+            //TODO:Set correct length check
+            if (!(AdditionalIdentificationInfo?.Length < 30 )) return;
+
+            FourCc = Encoding.ASCII.GetString(stream, start + 2, 4);
+            Version = stream[start + 6];
+            HdrSize = stream[start + 7];
+            Flags = Utils.Convert2BytesToUshort(stream,start+8);
+            Width = Utils.Convert4BytesToUint(stream, start + 10);
+            Height = Utils.Convert4BytesToUint(stream, start + 14);
+            FrameRate = Utils.Convert4BytesToUint(stream, start + 18);
+            AspectRatio = Utils.Convert4BytesToUint(stream, start + 22);
+            MainQuantizer = Utils.Convert4BytesToUint(stream, start + 26); //this is very wrong, i cannot just jam a float in here like this :-)
+
+            //todo: fill in the rest of all this
+            ChromaQuantizerAdd = 0;// 1 percents. ChromaQuantizer = MainQuantizer * (100 + ChromaQuantizerAdd) / 100
+            AlphaQuantizerAdd = 0;// 1 percents. AlphaQuantizer = MainQuantizer * (100 + AlphaQuantizerAdd ) / 100
+            Orientation = 0; // 1 see ORIENTATION
+            InterlaceType = 0; // 1 see INTERLACE_TYPE
+            ChromaFormat = 0; // 1 see CHROMA_FORMAT
+            BitDepth = 0;       // 1 Main Bitdepth                   
+            VideoFormat = 0;     // 1
+            ColorPrimaries = 0;    // 1
+            TransferCharacteristics = 0;// 1
+            MatrixCoefficients = 0;  // 1
+            MaxFrameSize = 0; // 4 if 0 - unspecified (VBR), if != 0 - specifies max public byte rate and CBR
+            EncodeMethod = 0; // 1
+            FrameType = 0; // 1 0 - total Intra, 1 - can have Delta-blocks, 2 - total Delta
+            TempRef = 0;       // 1
+            TimeCode = 0;       // 4 
+            FrameSize = 0; // 4 12 Coded frame size (in bytes), including header
+            NumExtraRecords = 0;// 1
+            ExtraRecordsSize = 0;// 2
         }
 
-        public CinegySubDescriptor SubDescriptor { get; set; }
+        public override string LongName => "Cinegy Daniel2 Coded Video";
 
-        public static Dictionary<byte, string> CinegySubDescriptorTypes = new Dictionary<byte, string>(){
-            {0x00, "reserved for future use"},
-            {0x01, "DANIEL2 Video Stream Descriptor"},
-            {0x02, "Cinegy Technical Metadata Descriptor"},
-            {0x03, "reserved for future use"},
-            {0x04, "reserved for future use" }
-        };
+        public override string Name => "Daniel2 Video";
+
+        public string FourCc { get; }       // 4 'D''N''L''2'                                      
+
+        public byte Version { get; }        // 1 Coded codec version                               
+        public byte HdrSize { get; }        // 1 size of header, not including extra records
+        public ushort Flags { get; }        // 2 see D2_FLAGS
+
+        public uint Width { get; }          // 4 Frame width                                       
+        public uint Height { get; }         // 4 Frame height                                      
+
+        public uint FrameRate { get; }      // 4 bits 0..19 are numerator, bits 20..31 are denominator (assuming 0 == 1 for denom).
+        public uint AspectRatio { get; }    // 4 bits 0..15 are numerator, bits 16..31 are denominator
+
+        public float MainQuantizer { get; } // 4 Main Quantizer
+        public byte ChromaQuantizerAdd { get; } // 1 percents. ChromaQuantizer = MainQuantizer * (100 + ChromaQuantizerAdd) / 100
+        public byte AlphaQuantizerAdd { get; } // 1 percents. AlphaQuantizer  = MainQuantizer * (100 + AlphaQuantizerAdd ) / 100
+
+        public byte Orientation { get; } // 1 see ORIENTATION
+        public byte InterlaceType { get; } // 1 see INTERLACE_TYPE
+
+        public byte ChromaFormat { get; } // 1 see CHROMA_FORMAT
+        public byte BitDepth { get; } // 1 Main Bitdepth                                     
+
+        public byte VideoFormat { get; }            
+        public byte ColorPrimaries { get; }         
+        public byte TransferCharacteristics { get; }
+        public byte MatrixCoefficients { get; }   
+
+        public uint MaxFrameSize { get; } // 4 if 0 - unspecified (VBR), if != 0 - specifies max public byte rate and CBR
+
+        // frame parameters
+        public byte EncodeMethod { get; }   // 1
+        public byte FrameType { get; }      // 1 0 - total Intra, 1 - can have Delta-blocks, 2 - total Delta
+        public byte TempRef { get; }        // 1
+
+        public uint TimeCode { get; }       // 4 
+        public uint FrameSize { get; }      // 4 12 Coded frame size (in bytes), including header
+
+        public byte NumExtraRecords { get; } // 1
+        public ushort ExtraRecordsSize { get; } // 2
+
+        //TODO: work out what to do with this - probably just delete...
+       // public byte __dummy[8]{ get; };     // 
 
     }
 
-    public class CinegySubDescriptor
+    public class CinegyTechMetadataDescriptor : RegistrationDescriptor //if format-identifier / organization tag == CNGY
     {
-        public CinegySubDescriptor(byte[] data)
+        public CinegyTechMetadataDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            SubDescriptorTag = data[0];
-            SubDescriptorLength = data[1];
-        }
-        public byte SubDescriptorTag { get; }
-        public byte SubDescriptorLength { get; }
-    }
+            if (!(AdditionalIdentificationInfo?.Length >= 2)) return;
 
-    public class CinegyDaniel2SubDescriptor : CinegySubDescriptor
-    {
-        public CinegyDaniel2SubDescriptor(byte[] data) : base(data)
-        {
-            if (data.Length == 3) //D2 sub-descriptors must be 3
-            {
-                CompatibilityLevelByte = data[3];
-            }
-        }
-
-        public byte CompatibilityLevelByte {get;}
-
-    }
-
-    public class CinegyTechMetadataSubDescriptor : CinegySubDescriptor
-    {
-        public CinegyTechMetadataSubDescriptor(byte[] data) : base(data)
-        {
-            if (data.Length > 4) 
-            {
-                //todo: set to extracted values
-                CinecoderVersion = "3.28.22";
-                MLVersion = "6.7.1";
-                AppVersion = "12.0.3.2112";
-                AppName = "PlayoutExApp";
-            }
+            //todo: set to extracted values
+            CinecoderVersion = "3.28.22";
+            MLVersion = "6.7.1";
+            AppVersion = "12.0.3.2112";
+            AppName = "PlayoutExApp";
         }
 
         public string CinecoderVersion { get; }
         public string MLVersion { get; }
         public string AppVersion { get; }
         public string AppName { get; }
-
-
     }
+
 }
