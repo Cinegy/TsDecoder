@@ -17,10 +17,11 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         public void ReadDescriptorsFromTestStreams()
         {
             ProcessFileForDescriptors(@"..\..\TestStreams\11954-2017-07-09-16-05-06.ts");
-            //ProcessFileForDescriptors(@"..\..\TestStreams\11720-2017-07-09-16-01-43.ts");
+            
+            //ProcessFileForDescriptors(@"D:\Data\OneDrive\Temp\DVBT2-HEVC-EAC3-SHORT.ts");
         }
 
-        private void ProcessFileForDescriptors(string sourceFileName)
+        private static void ProcessFileForDescriptors(string sourceFileName)
         {
             const int readFragmentSize = 1316;
 
