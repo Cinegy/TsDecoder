@@ -34,12 +34,16 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public Text(byte[] inputChars, int start, int length)
         {
-            _characters = new byte[length];
+            if (null == inputChars || inputChars.Length <= start) return;
 
-            if (null == inputChars || inputChars.Length <= start || inputChars.Length <= length + start) return;
+            if (inputChars.Length <= length + start)
+            {
+                length = inputChars.Length - start;
+            }
 
             try
             {
+                _characters = new byte[length];
                 Buffer.BlockCopy(inputChars, start, _characters, 0, length);
             }
             catch (Exception ex)
@@ -54,7 +58,7 @@ namespace Cinegy.TsDecoder.TransportStream
             {
                 return "";
             }
-            var ret = new byte[_characters.Length];
+            var ret = new byte[_characters.Length * 2]; //set to twice possible size to prevent repeat CRLF char doubles overflowing
             var char0 = _characters[0];
             ushort start;
             var characterTable = "ISO-8859-1";
@@ -116,11 +120,12 @@ namespace Cinegy.TsDecoder.TransportStream
                 }
                 else if (character != 0)
                 {
-                    ret[ii++] = _characters[i];
+                    ret[ii++] = character;
                 }
             }
 
-            return Encoding.GetEncoding(characterTable).GetString(Encoding.Convert(Encoding.GetEncoding(characterTable), Encoding.GetEncoding(characterTable), ret/*Encoding.UTF8.GetBytes(ret.Substring(start))*/)).Substring(0, ii);
+            var result = Encoding.GetEncoding(characterTable).GetString(Encoding.Convert(Encoding.GetEncoding(characterTable), Encoding.GetEncoding(characterTable), ret)).Substring(0, ii);
+            return result;
         }
     }
 }

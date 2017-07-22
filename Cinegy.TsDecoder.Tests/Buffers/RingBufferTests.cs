@@ -32,8 +32,6 @@ namespace Cinegy.TsDecoder.Tests.Buffers
         {
             var dataCount = 12;
             var dataSize = 1;
-            var returnedDataSize = 0;
-            ulong returnedTimestamp;
 
             Console.WriteLine($"Testing buffer addition for buffer size {dataCount}");
             try

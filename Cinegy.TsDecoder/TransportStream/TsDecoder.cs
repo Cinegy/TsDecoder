@@ -55,7 +55,7 @@ namespace Cinegy.TsDecoder.TransportStream
             if(_packetFactory == null) _packetFactory = new TsPacketFactory();
 
             var tsPackets = _packetFactory.GetTsPacketsFromData(data);
-
+            
             if (tsPackets == null)
             {
                 throw new InvalidDataException("Provided data buffer did not contain any TS packets");
@@ -80,7 +80,10 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             try
             {
-                if (newPacket.TransportErrorIndicator) return;
+                if (newPacket.TransportErrorIndicator)
+                {
+                    return;
+                }
 
                 switch (newPacket.Pid)
                 {
@@ -180,7 +183,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
             foreach (var pid in ProgramAssociationTable.Pids)
             {
-                if (!Equals(pid, tsPacket.Pid)) continue;
+                if (pid != tsPacket.Pid) continue;
                 contains = true;
                 break;
             }
