@@ -1034,8 +1034,6 @@ namespace Cinegy.TsDecoder.TransportStream
         public string CueStreamTypeString => CueStreamTypeDescription(CueStreamType);
     }
 
-
-
     public class Ac3Descriptor : Descriptor
     {
         /*
@@ -1176,7 +1174,58 @@ namespace Cinegy.TsDecoder.TransportStream
         
     }
 
-public static class DescriptorFactory
+    public class BouquetNameDescriptor : Descriptor
+    {
+        public BouquetNameDescriptor(byte[] stream, int start) : base(stream, start)
+        {
+            if (DescriptorLength !=0)
+            {
+                BouquetName = Utils.ConvertBytesToString(stream, start + 2, DescriptorLength);
+            }
+        }
+        public string BouquetName { get; }
+    }
+    public class ContentDescriptor : Descriptor
+    {
+        public ContentDescriptor(byte[] stream, int start) : base(stream, start)
+        {
+            var lastindex = start + 2;
+            var length = DescriptorLength;
+            while(length > 0)
+            {
+                try
+                {
+                    var contentnibble1 = (int)(stream[lastindex] >> 4);
+                    var contentnibble2 = (int)(stream[lastindex] & 0x0f);
+                    lastindex++;
+                    var userdefined = (int)stream[lastindex];
+                    lastindex++;
+                    ContentTypes.Add(new ContentType(contentnibble1, contentnibble2, userdefined));
+                    length -= 2;
+                }
+                catch(IndexOutOfRangeException)
+                {
+                    throw (new ArgumentOutOfRangeException("The Content Descriptor message is to short!"));
+                }
+            }
+
+        }
+        public ICollection<ContentType> ContentTypes { get; }
+        public class ContentType
+        {
+            private int contentnibble1;
+            private int contentnibble2;
+            private int userdefined;
+
+            public ContentType(int contentnibble1, int contentnibble2, int userdefined)
+            {
+                this.contentnibble1 = contentnibble1;
+                this.contentnibble2 = contentnibble2;
+                this.userdefined = userdefined;
+            }
+        }
+    }
+    public static class DescriptorFactory
     {
         public static Descriptor DescriptorFromData(byte[] stream, int start)
         {
@@ -1197,11 +1246,13 @@ public static class DescriptorFactory
                 case 0x40: return new NetworkNameDescriptor(stream, start);
                 case 0x41: return new ServiceListDescriptor(stream, start);
                 case 0x43: return new SatelliteDeliverySystemDescriptor(stream, start);
+                case 0x47: return new BouquetNameDescriptor(stream, start);
                 case 0x48: return new ServiceDescriptor(stream, start);
                 case 0x4D: return new ShortEventDescriptor(stream, start);
                 case 0x4E: return new ExtendedEventDescriptor(stream, start);
                 case 0x50: return new ComponentDescriptor(stream, start);
                 case 0x52: return new StreamIdentifierDescriptor(stream, start);
+                case 0x54: return new ContentDescriptor(stream, start);
                 case 0x56: return new TeletextDescriptor(stream, start);
                 case 0x59: return new SubtitlingDescriptor(stream, start);
                 case 0x5a: return new TerrestrialDeliverySystemDescriptor(stream, start);
