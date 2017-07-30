@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
 
@@ -424,61 +425,110 @@ namespace Cinegy.TsDecoder.TransportStream
                 ItemChar = new Text(item.ItemChar);
             }
 
-            public byte ItemDescriptionLength { get; internal set; }
+            public int ItemDescriptionLength { get; internal set; }
             public Text ItemDescriptionChar { get; internal set; }
-            public byte ItemLength { get; internal set; }
+            public int ItemLength { get; internal set; }
             public Text ItemChar { get; internal set; }
         }
 
         public ExtendedEventDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            DescriptorNumber = (byte) ((stream[start + 2] >> 4) & 0x0F);
-            LastDescriptorNumber = (byte) ((stream[start + 2]) & 0x0F);
-            ISO639LanguageCode = Encoding.UTF8.GetString(stream, start + 3, 3);
-            LengthOfItems = stream[start + 6];
-            var startOfItem = (ushort) (start + 7);
-            var items = new List<Item>();
-            while (startOfItem < (start + 7 + LengthOfItems))
+            int lastindex = start + 2;
+            try
             {
-                var item = new Item {ItemDescriptionLength = stream[startOfItem]};
+                DescriptorNumber = (byte)((stream[lastindex] >> 4) & 0x0F);
+                LastDescriptorNumber = (byte)((stream[lastindex]) & 0x0F);
+                lastindex++;
+                ISO639LanguageCode = Encoding.UTF8.GetString(stream, lastindex, 3);
+                lastindex += ISO639LanguageCode.Length;
+                LengthOfItems = stream[lastindex];
+                lastindex++;
+                if (LengthOfItems != 0)
+                {
+                    var items = new List<Item>();
+                    while (LengthOfItems != 0)
+                    {
+                        var item = new Item { ItemDescriptionLength = stream[lastindex] };
+                        lastindex++;
+                        if (item.ItemDescriptionLength != 0)
+                        {
+                            item.ItemDescriptionChar = new Text(stream, lastindex, item.ItemDescriptionLength);
+                            lastindex += item.ItemDescriptionLength;
+                        }
+                        item.ItemLength = stream[lastindex];
+                        lastindex++;
+                        if (item.ItemLength != 0)
+                        {
+                            item.ItemChar = new Text(stream, lastindex, item.ItemLength);
+                            lastindex += item.ItemLength;
+                        }
+                        items.Add(item);
+                        LengthOfItems -= (item.ItemDescriptionLength + item.ItemLength + 2);
+                    }
+                    Items = items;
+                }
 
-                item.ItemDescriptionChar = new Text(stream, startOfItem + 1, item.ItemDescriptionLength);
-                item.ItemLength = stream[startOfItem + 1 + item.ItemDescriptionLength];
-                item.ItemChar = new Text(stream, startOfItem + 1 + item.ItemDescriptionLength + 1, item.ItemLength);
-                startOfItem = (ushort) (startOfItem + 1 + item.ItemDescriptionLength + 1 + item.ItemLength);
-                items.Add(item);
+                TextLength = stream[lastindex];
+                lastindex++;
+                if (TextLength != 0)
+                {
+                    TextChar = new Text(stream, lastindex, TextLength);
+                    lastindex = +TextLength;
+                }
             }
-            Items = items;
-            TextLength = stream[startOfItem];
-            TextChar = new Text(stream, startOfItem + 1, TextLength);
-            Debug.WriteLine(TextChar);
+            catch (IndexOutOfRangeException ex)
+            { throw new ArgumentOutOfRangeException("Index was outside the bounds of the array."); }
         }
 
-        public byte DescriptorNumber { get; }
-        public byte LastDescriptorNumber { get; }
-        public string ISO639LanguageCode { get; }
-        public byte LengthOfItems { get; }
-        public IEnumerable<Item> Items { get; }
-        public byte TextLength { get; }
-        public Text TextChar { get; }
+        public byte DescriptorNumber { get; set; }
+        public byte LastDescriptorNumber { get; set; }
+        public string ISO639LanguageCode { get; set; }
+        public int LengthOfItems { get; set; }
+        public IEnumerable<Item> Items { get; set; }
+        public byte TextLength { get; set; }
+        public Text TextChar { get; set; }
     }
 
     public class ShortEventDescriptor : Descriptor
     {
         public ShortEventDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            ISO639LanguageCode = Encoding.UTF8.GetString(stream, start + 2, 3);
-            EventNameLength = stream[start + 5];
-            EventNameChar = new Text(stream, start + 6, EventNameLength);
-            TextLength = stream[start + 6 + EventNameLength];
-            TextChar = new Text(stream, start + 6 + EventNameLength + 1, TextLength);
+            int lastindex = start + 2;
+            try
+            {
+
+                ISO639LanguageCode = Encoding.UTF8.GetString(stream, lastindex, 3);
+                lastindex += ISO639LanguageCode.Length;
+
+                EventNameLength = stream[lastindex];
+                lastindex++;
+
+                if (EventNameLength != 0)
+                {
+                    EventNameChar = new Text(stream, lastindex, EventNameLength);
+                    lastindex += EventNameLength;
+                    //Debug.WriteLine(EventNameChar);
+                }
+
+                TextLength = stream[lastindex];
+                lastindex++;
+                if (TextLength != 0)
+                {
+                    TextChar = new Text(stream, lastindex, TextLength);
+                    lastindex += TextLength;
+                    //Debug.WriteLine(TextChar);
+                }
+            }
+
+            catch (IndexOutOfRangeException ex)
+            { throw new ArgumentOutOfRangeException("Index was outside the bounds of the array."); }
         }
 
-        public string ISO639LanguageCode { get; }
-        public byte EventNameLength { get; }
-        public Text EventNameChar { get; }
-        public byte TextLength { get; }
-        public Text TextChar { get; }
+        public string ISO639LanguageCode { get; set; }
+        public byte EventNameLength { get; set; }
+        public Text EventNameChar { get; set; }
+        public byte TextLength { get; set; }
+        public Text TextChar { get; set; }
     }
 
     public class ComponentDescriptor : Descriptor
@@ -1185,13 +1235,465 @@ namespace Cinegy.TsDecoder.TransportStream
         }
         public string BouquetName { get; }
     }
+
     public class ContentDescriptor : Descriptor
     {
+        public static string GetConentNibble2Description(byte contentnibble1, byte contentnibble2)
+        {
+            switch (contentnibble1)
+            {
+                case 0x0:
+                    if (contentnibble2 >= 0x0 || contentnibble2 <= 0xF)
+                    {
+                        return "undefined content";
+
+                    }
+                    break;
+                case 0x1:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "movie/drama (general)";
+                        case 0x01:
+                            return "detective/thriller";
+                        case 0x02:
+                            return "adventure/western/war";
+                        case 0x03:
+                            return "science fiction/fantasy/horror";
+                        case 0x04:
+                            return "comedy";
+                        case 0x05:
+                            return "soap/melodrama/folkloric";
+                        case 0x06:
+                            return "romance";
+                        case 0x07:
+                            return "serious/classical/religious/historical movie/drama";
+                        case 0x08:
+                            return "adult movie/drama";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0x0F:
+                            return "user defined";
+                    }
+                    break;
+                case 0x2:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "news/current affairs (general)";
+                        case 0x01:
+                            return "news/weather report";
+                        case 0x02:
+                            return "news magazine";
+                        case 0x03:
+                            return "documentary";
+                        case 0x04:
+                            return "discussion/interview/debate";
+                        case 0x05:
+                            return "reserved for future use";
+                        case 0x06:
+                            return "reserved for future use";
+                        case 0x07:
+                            return "reserved for future use";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0x3:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "show/game show (general)";
+                        case 0x01:
+                            return "game show/quiz/contest";
+                        case 0x02:
+                            return "variety show";
+                        case 0x03:
+                            return "talk show";
+                        case 0x04:
+                            return "reserved for future use";
+                        case 0x05:
+                            return "reserved for future use";
+                        case 0x06:
+                            return "reserved for future use";
+                        case 0x07:
+                            return "reserved for future use";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0x4:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "sports (general)";
+                        case 0x01:
+                            return "special events (Olympic Games, World Cup, etc.)";
+                        case 0x02:
+                            return "sports magazines";
+                        case 0x03:
+                            return "football/soccer";
+                        case 0x04:
+                            return "tennis/squash";
+                        case 0x05:
+                            return "team sports (excluding football)";
+                        case 0x06:
+                            return "athletics";
+                        case 0x07:
+                            return "motor sport";
+                        case 0x08:
+                            return "water sport";
+                        case 0x09:
+                            return "winter sports";
+                        case 0x0A:
+                            return "equestrian";
+                        case 0x0B:
+                            return "martial sports";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0x5:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "children's/youth programmes (general)";
+                        case 0x01:
+                            return "pre-school children's programmes";
+                        case 0x02:
+                            return "entertainment programmes for 6 to14";
+                        case 0x03:
+                            return "entertainment programmes for 10 to 16";
+                        case 0x04:
+                            return "informational/educational/school programmes";
+                        case 0x05:
+                            return "cartoons/puppets";
+                        case 0x06:
+                            return "reserved for future use";
+                        case 0x07:
+                            return "reserved for future use";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0x6:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "music/ballet/dance (general)";
+                        case 0x01:
+                            return "rock/pop";
+                        case 0x02:
+                            return "serious music/classical music";
+                        case 0x03:
+                            return "folk/traditional music";
+                        case 0x04:
+                            return "jazz";
+                        case 0x05:
+                            return "musical/opera";
+                        case 0x06:
+                            return "ballet";
+                        case 0x07:
+                            return "reserved for future use";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0x7:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "arts/culture (without music, general)";
+                        case 0x01:
+                            return "performing arts";
+                        case 0x02:
+                            return "fine arts";
+                        case 0x03:
+                            return "religion";
+                        case 0x04:
+                            return "popular culture/traditional arts";
+                        case 0x05:
+                            return "literature";
+                        case 0x06:
+                            return "film/cinema";
+                        case 0x07:
+                            return "experimental film/video";
+                        case 0x08:
+                            return "broadcasting/press";
+                        case 0x09:
+                            return "new media";
+                        case 0x0A:
+                            return "arts/culture magazines";
+                        case 0x0B:
+                            return "fashion";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0x8:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "social/political issues/economics (general)";
+                        case 0x01:
+                            return "magazines/reports/documentary";
+                        case 0x02:
+                            return "economics/social advisory";
+                        case 0x03:
+                            return "remarkable people";
+                        case 0x04:
+                            return "reserved for future use";
+                        case 0x05:
+                            return "reserved for future use";
+                        case 0x06:
+                            return "reserved for future use";
+                        case 0x07:
+                            return "reserved for future use";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0x9:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "education/science/factual topics (general)";
+                        case 0x01:
+                            return "nature/animals/environment";
+                        case 0x02:
+                            return "technology/natural sciences";
+                        case 0x03:
+                            return "medicine/physiology/psychology";
+                        case 0x04:
+                            return "foreign countries/expeditions";
+                        case 0x05:
+                            return "social/spiritual sciences";
+                        case 0x06:
+                            return "further education";
+                        case 0x07:
+                            return "languages";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0xA:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "leisure hobbies (general)";
+                        case 0x01:
+                            return "tourism/travel";
+                        case 0x02:
+                            return "handicraft";
+                        case 0x03:
+                            return "motoring";
+                        case 0x04:
+                            return "fitness and health";
+                        case 0x05:
+                            return "cooking";
+                        case 0x06:
+                            return "advertisement/shopping";
+                        case 0x07:
+                            return "gardening";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0xB:
+                    switch (contentnibble2)
+                    {
+                        case 0x00:
+                            return "original language";
+                        case 0x01:
+                            return "black and white";
+                        case 0x02:
+                            return "unpublished";
+                        case 0x03:
+                            return "live broadcast";
+                        case 0x04:
+                            return "plano-stereoscopic";
+                        case 0x05:
+                            return "local or regional";
+                        case 0x06:
+                            return "reserved for future use";
+                        case 0x07:
+                            return "reserved for future use";
+                        case 0x08:
+                            return "reserved for future use";
+                        case 0x09:
+                            return "reserved for future use";
+                        case 0x0A:
+                            return "reserved for future use";
+                        case 0x0B:
+                            return "reserved for future use";
+                        case 0x0C:
+                            return "reserved for future use";
+                        case 0x0D:
+                            return "reserved for future use";
+                        case 0x0E:
+                            return "reserved for future use";
+                        case 0xF:
+                            return "user defined";
+                    }
+                    break;
+                case 0xF:
+                    if (contentnibble2 >= 0x0 || contentnibble2 <= 0xF)
+                    { return "user defined"; }
+                    break;
+            }
+            if ((contentnibble1 >= 0xC || contentnibble1 <= 0xE) && (contentnibble2 >= 0x0 || contentnibble2 <= 0xF))
+            {
+                return "reserved for future use";
+            }
+            return "";
+
+        }
+        public static string GetConentNibble1Description(byte contentnibble1)
+        {
+            switch (contentnibble1)
+            {
+                case 0x0: return "undefined content";
+                case 0x1: return "Movie/Drama:";
+                case 0x2: return "News/Current affairs:";
+                case 0x3: return "Show/Game show:";
+                case 0x4: return "Sports:";
+                case 0x5: return "Children's/Youth programmes:";
+                case 0x6: return "Music/Ballet/Dance:";
+                case 0x7: return "Arts/Culture (without music)::";
+                case 0x8: return "Social/Political issues/Economics:";
+                case 0x9: return "Education/Science/Factual topics:";
+                case 0xA: return "Leisure hobbies:";
+                case 0xB: return "Special characteristics:";
+                case 0xF: return "user defined";
+                default: return "reserved for future use:";
+            }
+
+        }
         public ContentDescriptor(byte[] stream, int start) : base(stream, start)
         {
             var lastindex = start + 2;
             var length = DescriptorLength;
-            while(length > 0)
+            while (length > 0)
             {
                 try
                 {
@@ -1200,10 +1702,12 @@ namespace Cinegy.TsDecoder.TransportStream
                     lastindex++;
                     var userdefined = (int)stream[lastindex];
                     lastindex++;
+                    if (ContentTypes == null)
+                    { ContentTypes = new Collection<ContentType>(); }
                     ContentTypes.Add(new ContentType(contentnibble1, contentnibble2, userdefined));
                     length -= 2;
                 }
-                catch(IndexOutOfRangeException)
+                catch (IndexOutOfRangeException)
                 {
                     throw (new ArgumentOutOfRangeException("The Content Descriptor message is to short!"));
                 }
@@ -1225,6 +1729,42 @@ namespace Cinegy.TsDecoder.TransportStream
             }
         }
     }
+
+    public class ParentalRatingDescriptor : Descriptor
+    {
+        public ParentalRatingDescriptor(byte[] stream, int start) : base(stream, start)
+        {
+            var lastindex = start + 2;
+            try
+            {
+                if (DescriptorLength != 0)
+                {
+                    var length = DescriptorLength;
+
+                    while (length != 0)
+                    {
+                        CountryCode = Encoding.UTF8.GetString(stream, lastindex, 3);
+                        lastindex += 3;
+                        var parentalRating = (int)(stream[lastindex]);
+                        lastindex++;
+                        if(ParentalRatings== null)
+                        { ParentalRatings = new Collection<int>(); }
+                        ParentalRatings.Add(parentalRating);
+                        length -= 4;
+                    }
+                }
+
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw (new ArgumentOutOfRangeException("The Parental Rating Descriptor Message is to short"));
+            }
+        }
+        public string CountryCode { get; set; }
+        public ICollection<int> ParentalRatings { get; }
+
+    }
+
     public static class DescriptorFactory
     {
         public static Descriptor DescriptorFromData(byte[] stream, int start)
@@ -1251,8 +1791,9 @@ namespace Cinegy.TsDecoder.TransportStream
                 case 0x4D: return new ShortEventDescriptor(stream, start);
                 case 0x4E: return new ExtendedEventDescriptor(stream, start);
                 case 0x50: return new ComponentDescriptor(stream, start);
-                case 0x52: return new StreamIdentifierDescriptor(stream, start);
+                case 0x52: return new StreamIdentifierDescriptor(stream, start);                
                 case 0x54: return new ContentDescriptor(stream, start);
+                case 0x55: return new ParentalRatingDescriptor(stream, start);
                 case 0x56: return new TeletextDescriptor(stream, start);
                 case 0x59: return new SubtitlingDescriptor(stream, start);
                 case 0x5a: return new TerrestrialDeliverySystemDescriptor(stream, start);
@@ -1264,4 +1805,6 @@ namespace Cinegy.TsDecoder.TransportStream
             }
         }
     }
+
+    
 }
