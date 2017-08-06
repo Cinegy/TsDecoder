@@ -66,5 +66,15 @@ namespace Cinegy.TsDecoder.TransportStream
 
             return temp;
         }
+
+        public static string ConvertBytesToString(byte[] buffer,int offset,int length)
+        {
+            var retval = new StringBuilder(4);
+            for(var index=0;index<length;index++)
+            {
+                retval.Append((char)buffer[offset + index]);
+            }
+            return (retval.ToString());
+        }
     }
 }
