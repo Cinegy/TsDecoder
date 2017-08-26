@@ -432,32 +432,57 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public ExtendedEventDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            DescriptorNumber = (byte) ((stream[start + 2] >> 4) & 0x0F);
-            LastDescriptorNumber = (byte) ((stream[start + 2]) & 0x0F);
-            ISO639LanguageCode = Encoding.UTF8.GetString(stream, start + 3, 3);
-            LengthOfItems = stream[start + 6];
-            var startOfItem = (ushort) (start + 7);
-            var items = new List<Item>();
-            while (startOfItem < (start + 7 + LengthOfItems))
+            int lastindex = start + 2;
+            try
             {
-                var item = new Item {ItemDescriptionLength = stream[startOfItem]};
+                DescriptorNumber = (byte)((stream[lastindex] >> 4) & 0x0F);
+                LastDescriptorNumber = (byte)((stream[lastindex]) & 0x0F);
+                lastindex++;
+                ISO639LanguageCode = Encoding.UTF8.GetString(stream, lastindex, 3);
+                lastindex += ISO639LanguageCode.Length;
+                LengthOfItems = stream[lastindex];
+                lastindex++;
+                if (LengthOfItems != 0)
+                {
+                    var items = new List<Item>();
+                    while (LengthOfItems != 0)
+                    {
+                        var item = new Item { ItemDescriptionLength = stream[lastindex] };
+                        lastindex++;
+                        if (item.ItemDescriptionLength != 0)
+                        {
+                            item.ItemDescriptionChar = new Text(stream, lastindex, item.ItemDescriptionLength);
+                            lastindex += item.ItemDescriptionLength;
+                        }
+                        item.ItemLength = stream[lastindex];
+                        lastindex++;
+                        if (item.ItemLength != 0)
+                        {
+                            item.ItemChar = new Text(stream, lastindex, item.ItemLength);
+                            lastindex += item.ItemLength;
+                        }
+                        items.Add(item);
+                        LengthOfItems -= (item.ItemDescriptionLength + item.ItemLength + 2);
+                    }
+                    Items = items;
+                }
 
-                item.ItemDescriptionChar = new Text(stream, startOfItem + 1, item.ItemDescriptionLength);
-                item.ItemLength = stream[startOfItem + 1 + item.ItemDescriptionLength];
-                item.ItemChar = new Text(stream, startOfItem + 1 + item.ItemDescriptionLength + 1, item.ItemLength);
-                startOfItem = (ushort) (startOfItem + 1 + item.ItemDescriptionLength + 1 + item.ItemLength);
-                items.Add(item);
+                TextLength = stream[lastindex];
+                lastindex++;
+                if (TextLength != 0)
+                {
+                    TextChar = new Text(stream, lastindex, TextLength);
+                    lastindex = +TextLength;
+                }
             }
-            Items = items;
-            TextLength = stream[startOfItem];
-            TextChar = new Text(stream, startOfItem + 1, TextLength);
-            Debug.WriteLine(TextChar);
+            catch (IndexOutOfRangeException)
+            { throw new ArgumentOutOfRangeException("Index was outside the bounds of the array."); }
         }
 
         public byte DescriptorNumber { get; }
         public byte LastDescriptorNumber { get; }
         public string ISO639LanguageCode { get; }
-        public byte LengthOfItems { get; }
+        public int LengthOfItems { get; }
         public IEnumerable<Item> Items { get; }
         public byte TextLength { get; }
         public Text TextChar { get; }
@@ -467,11 +492,35 @@ namespace Cinegy.TsDecoder.TransportStream
     {
         public ShortEventDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            ISO639LanguageCode = Encoding.UTF8.GetString(stream, start + 2, 3);
-            EventNameLength = stream[start + 5];
-            EventNameChar = new Text(stream, start + 6, EventNameLength);
-            TextLength = stream[start + 6 + EventNameLength];
-            TextChar = new Text(stream, start + 6 + EventNameLength + 1, TextLength);
+            int lastindex = start + 2;
+            try
+            {
+
+                ISO639LanguageCode = Encoding.UTF8.GetString(stream, lastindex, 3);
+                lastindex += ISO639LanguageCode.Length;
+
+                EventNameLength = stream[lastindex];
+                lastindex++;
+
+                if (EventNameLength != 0)
+                {
+                    EventNameChar = new Text(stream, lastindex, EventNameLength);
+                    lastindex += EventNameLength;
+                    //Debug.WriteLine(EventNameChar);
+                }
+
+                TextLength = stream[lastindex];
+                lastindex++;
+                if (TextLength != 0)
+                {
+                    TextChar = new Text(stream, lastindex, TextLength);
+                    lastindex += TextLength;
+                    //Debug.WriteLine(TextChar);
+                }
+            }
+
+            catch (IndexOutOfRangeException)
+            { throw new ArgumentOutOfRangeException("Index was outside the bounds of the array."); }
         }
 
         public string ISO639LanguageCode { get; }
