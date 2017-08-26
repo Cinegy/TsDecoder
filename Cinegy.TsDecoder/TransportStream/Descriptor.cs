@@ -21,6 +21,7 @@ using System.Text;
 
 namespace Cinegy.TsDecoder.TransportStream
 {
+    
     public class Descriptor
     {
         public Descriptor(byte[] stream, int start)
@@ -52,7 +53,13 @@ namespace Cinegy.TsDecoder.TransportStream
             return $"(0x{DescriptorTag:x2}): {Name}, Length: {DescriptorLength}";
         }
     }
-
+    /// <summary>
+    /// A TeleText Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class TeletextDescriptor : Descriptor
     {
         public static Dictionary<byte, string> TeletextTypes = new Dictionary<byte, string>()
@@ -136,7 +143,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public IEnumerable<Language> Languages { get; }
     }
-
+    /// <summary>
+    /// A Registration Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class RegistrationDescriptor : Descriptor
     {
         //ISO/IEC 13818-1:2007 Table 2-51
@@ -157,7 +170,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public byte[] AdditionalIdentificationInfo { get; }
     }
-
+    /// <summary>
+    /// A Stream Identifier Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class StreamIdentifierDescriptor : Descriptor
     {
         public StreamIdentifierDescriptor(byte[] stream, int start) : base(stream, start)
@@ -167,7 +186,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public byte ComponentTag { get; }
     }
-
+    /// <summary>
+    /// A Iso 639 Language Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class Iso639LanguageDescriptor : Descriptor
     {
         public Iso639LanguageDescriptor(byte[] stream, int start) : base(stream, start)
@@ -179,7 +204,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public string Language { get; }
         public byte AudioType { get; }
     }
-
+    /// <summary>
+    /// A Subtitling Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class SubtitlingDescriptor : Descriptor
     {
 
@@ -215,7 +246,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public IEnumerable<Language> Languages { get; }
     }
-
+    /// <summary>
+    /// A Data Broadcast Identity Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class DataBroadcastIdDescriptor : Descriptor
     {
         public DataBroadcastIdDescriptor(byte[] stream, int start) : base(stream, start)
@@ -225,7 +262,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public ushort DataBroadcastId { get; }
     }
-
+    /// <summary>
+    /// A Service List Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class ServiceListDescriptor : Descriptor
     {
         public static string ServiceTypeDescription(byte serviceType)
@@ -313,7 +356,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public IEnumerable<Service> Services { get; }
 
     }
-
+    /// <summary>
+    /// A Service Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class ServiceDescriptor : Descriptor
     {
         public static string GetServiceTypeDescription(byte serviceType)
@@ -408,7 +457,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public byte ServiceNameLength { get; } // 8 uimsbf 
         public Text ServiceName { get; }
     }
-
+    /// <summary>
+    /// A Extended Event Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class ExtendedEventDescriptor : Descriptor
     {
         public class Item
@@ -488,7 +543,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public byte TextLength { get; }
         public Text TextChar { get; }
     }
-
+    /// <summary>
+    /// A Short Event Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class ShortEventDescriptor : Descriptor
     {
         public ShortEventDescriptor(byte[] stream, int start) : base(stream, start)
@@ -530,7 +591,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public byte TextLength { get; }
         public Text TextChar { get; }
     }
-
+    /// <summary>
+    /// A Component Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class ComponentDescriptor : Descriptor
     {
         public static string GetComponentDescription(byte streamContent, byte streamContentExt, byte componentType)
@@ -873,7 +940,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public Text TextChar { get; }
         public string ComponentDescription => GetComponentDescription(StreamContent, StreamContentExt, ComponentType);
     }
-
+    /// <summary>
+    /// A Satelite Delivery Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class SatelliteDeliverySystemDescriptor : Descriptor
     {
         public static string[] PolarizationDescription = new string[]
@@ -962,7 +1035,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public byte FECInner { get; }
         public string FECInnerString => FECInnerDescription(FECInner);
     }
-
+    /// <summary>
+    /// A Networkname Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class NetworkNameDescriptor : Descriptor
     {
         public NetworkNameDescriptor(byte[] stream, int start) : base(stream, start)
@@ -982,7 +1061,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public string NetworkName { get; }
     }
-
+    /// <summary>
+    /// A Terrestrial Delivery System Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class TerrestrialDeliverySystemDescriptor : Descriptor
     {
         public static string[] BandwidthDescription = new string[]
@@ -1049,7 +1134,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public bool OtherFrequencyFlag { get; }
         public uint ReservedFutureUse2 { get; }
     }
-
+    /// <summary>
+    /// A Cue Identifier Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class CueIdentifierDescriptor : Descriptor
     {
         public string CueStreamTypeDescription(byte cueType)
@@ -1083,9 +1174,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public byte CueStreamType { get; }
         public string CueStreamTypeString => CueStreamTypeDescription(CueStreamType);
     }
-
-
-
+    /// <summary>
+    /// A AC3 Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class Ac3Descriptor : Descriptor
     {
         /*
@@ -1135,7 +1230,13 @@ namespace Cinegy.TsDecoder.TransportStream
             if (AsvcFlag) Asvc = stream[idx];
         }
     }
-
+    /// <summary>
+    /// A Enhanced AC3 Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class Eac3Descriptor : Descriptor
     {
         /*
@@ -1212,7 +1313,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
 
     }
-
+    /// <summary>
+    /// A CA Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class CADescriptor : Descriptor
     {
         public CADescriptor(byte[] stream, int start) : base(stream, start)
@@ -1225,7 +1332,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public int SystemIdentifier { get; }
         
     }
-
+    /// <summary>
+    /// A Bouquetname Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class BouquetNameDescriptor : Descriptor
     {
         public BouquetNameDescriptor(byte[] stream, int start) : base(stream, start)
@@ -1239,7 +1352,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public string BouquetName { get; private set; }
     }
-
+    /// <summary>
+    /// A Content Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class ContentDescriptor : Descriptor
     {
         public static string GetConentNibble2Description(byte contentnibble1, byte contentnibble2)
@@ -1735,7 +1854,13 @@ namespace Cinegy.TsDecoder.TransportStream
             }
         }
     }
-
+    /// <summary>
+    /// A Parental Rating Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class ParentalRatingDescriptor : Descriptor
     {
         public ParentalRatingDescriptor(byte[] stream, int start) : base(stream, start)
@@ -1766,7 +1891,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public string CountryCode { get; set; }
         public ICollection<int> ParentalRatings { get; }
     }
-
+    /// <summary>
+    /// A Private Data Specifier Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class PrivateDataSpecifierDescriptor : Descriptor
     {
         public PrivateDataSpecifierDescriptor(byte[] stream, int start) : base(stream, start)
@@ -1789,7 +1920,13 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public int DataSpecifier { get; private set; }
     }
-
+    /// <summary>
+    /// A Data Broadcast Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class DataBroadcastDescriptor : Descriptor
     {
         public DataBroadcastDescriptor(byte[] stream, int start) : base(stream, start)
@@ -1840,7 +1977,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public string TextDescription { get; private set; }
         public byte[] SelectorBytes { get; private set; }
     }
-
+    /// <summary>
+    /// A Country Availability Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class CountryAvailabilityDescriptor : Descriptor
     {
         public CountryAvailabilityDescriptor(byte[] stream, int start) : base(stream, start)
@@ -1878,7 +2021,13 @@ namespace Cinegy.TsDecoder.TransportStream
         public bool AvailabilityFlag { get; private set; }
         public Collection<string> CountryCodes { get; private set; }
     }
-
+    /// <summary>
+    /// A Ca Identifier Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class CaIdentifierDescriptor : Descriptor
     {
         public CaIdentifierDescriptor(byte[] stream, int start) : base(stream, start)
@@ -1898,7 +2047,13 @@ namespace Cinegy.TsDecoder.TransportStream
         }
         public ushort[] CaSystemIds { get; set; }
     }
-
+    /// <summary>
+    /// A Ca System Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
     public class CaSystemDescriptor : Descriptor
     {
         public CaSystemDescriptor(byte[] stream, int start) : base(stream, start)
