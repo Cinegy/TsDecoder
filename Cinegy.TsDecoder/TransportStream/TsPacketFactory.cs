@@ -137,38 +137,49 @@ namespace Cinegy.TsDecoder.TransportStream
                             {
                                 tsPacket.PesHeader = new PesHdr
                                 {
-                                    StartCode = 0x100 + data[payloadOffs + 3],
+                                    StartCode = (uint)((data[payloadOffs] << 16) + (data[payloadOffs + 1] << 8) + data[payloadOffs + 2]),
+                                    StreamId = data[payloadOffs + 3],
+                                    PacketLength = (ushort)((data[payloadOffs + 4] << 8) + data[payloadOffs + 5]),
                                     Pts = -1,
                                     Dts = -1
                                 };
 
-                                var ptsDtsFlag = data[payloadOffs + 7] >> 6;
+                                tsPacket.PesHeader.HeaderLength = (byte)tsPacket.PesHeader.PacketLength;
 
-                                switch (ptsDtsFlag)
+                                var stmrId = tsPacket.PesHeader.StreamId; //just copying to small name to make code less huge and slightly faster...
+
+                                if ((stmrId != (uint)PesStreamTypes.ProgramStreamMap) &&
+                                    (stmrId != (uint)PesStreamTypes.PaddingStream) &&
+                                    (stmrId != (uint)PesStreamTypes.PrivateStream2) &&
+                                    (stmrId != (uint)PesStreamTypes.ECMStream) &&
+                                    (stmrId != (uint)PesStreamTypes.EMMStream) &&
+                                    (stmrId != (uint)PesStreamTypes.ProgramStreamDirectory) &&
+                                    (stmrId != (uint)PesStreamTypes.DSMCCStream) &&
+                                    (stmrId != (uint)PesStreamTypes.H2221TypeEStream))
                                 {
-                                    case 2:
-                                        tsPacket.PesHeader.Pts = Get_TimeStamp(2, data, payloadOffs + 9);
-                                        break;
-                                    case 3:
-                                        tsPacket.PesHeader.Pts = Get_TimeStamp(3, data, payloadOffs + 9);
-                                        tsPacket.PesHeader.Dts = Get_TimeStamp(1, data, payloadOffs + 14);
-                                        break;
-                                    case 1:
-                                        throw new Exception("PES Syntax error: pts_dts_flag = 1");
+                                    var ptsDtsFlag = data[payloadOffs + 7] >> 6;
+
+                                    tsPacket.PesHeader.HeaderLength = (byte)(9 + data[payloadOffs + 8]); ;
+
+                                    switch (ptsDtsFlag)
+                                    {
+                                        case 2:
+                                            tsPacket.PesHeader.Pts = Get_TimeStamp(2, data, payloadOffs + 9);
+                                            break;
+                                        case 3:
+                                            tsPacket.PesHeader.Pts = Get_TimeStamp(3, data, payloadOffs + 9);
+                                            tsPacket.PesHeader.Dts = Get_TimeStamp(1, data, payloadOffs + 14);
+                                            break;
+                                        case 1:
+                                            throw new Exception("PES Syntax error: pts_dts_flag = 1");
+                                    }
                                 }
 
-                                //if (tsPacket.AdaptationField.PcrFlag && ptsDtsFlag > 1)
-                                //{
-                                //    var ts = new TimeSpan((long)(((long)tsPacket.AdaptationField.Pcr - tsPacket.PesHeader.Pts * 300)/2.7));
-                                //    Debug.WriteLine($"PCR: {tsPacket.AdaptationField.Pcr}, PTS: {tsPacket.PesHeader.Pts}, Delta = {ts}");
-                                //}
+                                tsPacket.PesHeader.Payload = new byte[tsPacket.PesHeader.HeaderLength];
+                                Buffer.BlockCopy(data, payloadOffs, tsPacket.PesHeader.Payload, 0, tsPacket.PesHeader.HeaderLength);
 
-                                var pesLength = 9 + data[payloadOffs + 8];
-                                tsPacket.PesHeader.Payload = new byte[pesLength];
-                                Buffer.BlockCopy(data, payloadOffs, tsPacket.PesHeader.Payload, 0, pesLength);
-
-                                payloadOffs += pesLength;
-                                payloadSize -= pesLength;
+                                payloadOffs += tsPacket.PesHeader.HeaderLength;
+                                payloadSize -= tsPacket.PesHeader.HeaderLength;
                             }
                         }
 

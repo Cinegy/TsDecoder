@@ -40,7 +40,6 @@ namespace Cinegy.TsDecoder.TransportStream
 
     public class Pes
     {
-        public const byte PrivateStream1 = 0xBD;
         public const uint DefaultPacketStartCodePrefix = 0x000001;
         
         public uint PacketStartCodePrefix { get; set; } //3 bytes 	0x000001

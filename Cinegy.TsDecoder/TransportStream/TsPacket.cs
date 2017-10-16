@@ -17,10 +17,13 @@ namespace Cinegy.TsDecoder.TransportStream
 {
     public struct PesHdr
     {
+        public uint StartCode;
+        public byte StreamId;
+        public ushort PacketLength;
         public long Pts;
         public long Dts;
-        public int StartCode;
         public byte[] Payload;
+        public byte HeaderLength;
     }
 
     public struct TsPacket
@@ -62,6 +65,27 @@ namespace Cinegy.TsDecoder.TransportStream
         SdtPid = 0x11,
         EitPid = 0x12,
         NullPid = 0x1FFF
+    }
+
+    public enum PesStreamTypes
+    {
+        ProgramStreamMap = 0xBC,
+        PrivateStream1 = 0xBD,
+        PaddingStream = 0xBE,
+        PrivateStream2 = 0xBF,
+        ECMStream = 0xF0,
+        EMMStream = 0xF1,
+        DSMCCStream = 0xF2,
+        IEC13522Stream = 0xF3,
+        H2221TypeAStream = 0xF4,
+        H2221TypeBStream = 0xF5,
+        H2221TypeCStream = 0xF6,
+        H2221TypeDStream = 0xF7,
+        H2221TypeEStream = 0xF8,
+        AncillaryStream = 0xF9,
+        IEC144961SLPacketizedStream = 0xFA,
+        IEC144961FlexMuxStream = 0xFB,
+        ProgramStreamDirectory = 0xFF
     }
 
 
