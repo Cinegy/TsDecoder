@@ -40,6 +40,7 @@ namespace Cinegy.TsDecoder.TransportStream
         public PesHdr PesHeader;
         public byte[] Payload;
         public AdaptationField AdaptationField;
+        public byte[] SourceData;
     }
 
     public struct AdaptationField
