@@ -79,7 +79,8 @@ namespace Cinegy.TsDecoder.TransportStream
                         ScramblingControl = (short)(data[start + 3] >> 6),
                         AdaptationFieldExists = (data[start + 3] & 0x20) != 0,
                         ContainsPayload = (data[start + 3] & 0x10) != 0,
-                        ContinuityCounter = (short)(data[start + 3] & 0xF)
+                        ContinuityCounter = (short)(data[start + 3] & 0xF),
+                        SourceBufferIndex = start
                     };
 
                     if(preserveSourceData)

@@ -40,7 +40,8 @@ namespace Cinegy.TsDecoder.TransportStream
         public PesHdr PesHeader;
         public byte[] Payload;
         public AdaptationField AdaptationField;
-        public byte[] SourceData;
+        public byte[] SourceData; //original data used to construct packet (if chosen to retain)
+        public int SourceBufferIndex; //index into original data buffer used to construct packet
     }
 
     public struct AdaptationField
