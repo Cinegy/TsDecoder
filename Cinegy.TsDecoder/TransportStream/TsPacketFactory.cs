@@ -47,10 +47,12 @@ namespace Cinegy.TsDecoder.TransportStream
         /// <param name="retainPayload">Optional parameter to trigger any resulting TS payload to be copied into the returned structure</param>
         /// <param name="preserveSourceData">Optional parameter to trigger complete copy of source data for TS packet to be held in array for quick access</param>
         /// <returns>Complete TS packets from this data and any prior partial data rolled over.</returns>
-        public TsPacket[] GetTsPacketsFromData(byte[] data, bool retainPayload = true, bool preserveSourceData = false)
+        public TsPacket[] GetTsPacketsFromData(byte[] data, int dataSize = 0, bool retainPayload = true, bool preserveSourceData = false)
         {
             try
             {
+                if(dataSize == 0) { dataSize = data.Length; }
+
                 if (_residualData != null)
                 {
                     var tempArray = new byte[data.Length];
@@ -60,14 +62,14 @@ namespace Cinegy.TsDecoder.TransportStream
                     Buffer.BlockCopy(tempArray,0,data,_residualData.Length,tempArray.Length);
                 }
 
-                var maxPackets = (data.Length) / TsPacketFixedSize;
+                var maxPackets = (dataSize) / TsPacketFixedSize;
                 var tsPackets = new TsPacket[maxPackets];
 
                 var packetCounter = 0;
 
                 var start = FindSync(data, 0, TsPacketFixedSize);
 
-                while (start >= 0 && ((data.Length - start) >= TsPacketFixedSize))
+                while (start >= 0 && ((dataSize - start) >= TsPacketFixedSize))
                 {
                     var tsPacket = new TsPacket
                     {
@@ -147,7 +149,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
                         if (tsPacket.ContainsPayload && tsPacket.PayloadUnitStartIndicator)
                         {
-                            if (payloadOffs > (data.Length - 2) || data[payloadOffs] != 0 || data[payloadOffs + 1] != 0 || data[payloadOffs + 2] != 1)
+                            if (payloadOffs > (dataSize - 2) || data[payloadOffs] != 0 || data[payloadOffs + 1] != 0 || data[payloadOffs + 2] != 1)
                             {
 #if DEBUG
                                 //    Debug.WriteLine("PES syntax error: no PES startcode found, or payload offset exceeds boundary of data");
@@ -214,17 +216,17 @@ namespace Cinegy.TsDecoder.TransportStream
 
                     start += TsPacketFixedSize;
 
-                    if (start >= data.Length)
+                    if (start >= dataSize)
                         break;
                     if (data[start] != SyncByte)
                         break;  // but this is strange!
                 }
 
-                if ((start + TsPacketFixedSize) != data.Length)
+                if ((start + TsPacketFixedSize) != dataSize)
                 {
                     //we have 'residual' data to carry over to next call
-                    _residualData = new byte[data.Length - start];
-                    Buffer.BlockCopy(data,start,_residualData,0,data.Length-start);
+                    _residualData = new byte[dataSize - start];
+                    Buffer.BlockCopy(data,start,_residualData,0, dataSize - start);
                 }
 
                 return tsPackets;
