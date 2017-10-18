@@ -16,8 +16,9 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         [TestMethod()]
         public void ReadDescriptorsFromTestStreams()
         {
-            ProcessFileForDescriptors(@"..\..\TestStreams\11954-2017-07-09-16-05-06.ts");
+           // ProcessFileForDescriptors(@"..\..\TestStreams\11954-2017-07-09-16-05-06.ts");
             
+            ProcessFileForDescriptors(@"\\cinebsfs1\CONTENT\Reference Media\TS\Playbox-Babcock-Examples\CH1-20160513-141358.ts");
             //ProcessFileForDescriptors(@"D:\Data\OneDrive\Temp\DVBT2-HEVC-EAC3-SHORT.ts");
         }
 
