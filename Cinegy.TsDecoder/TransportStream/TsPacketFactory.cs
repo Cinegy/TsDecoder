@@ -55,11 +55,12 @@ namespace Cinegy.TsDecoder.TransportStream
 
                 if (_residualData != null)
                 {
-                    var tempArray = new byte[data.Length];
-                    Buffer.BlockCopy(data,0,tempArray,0,data.Length);
+                    var tempArray = new byte[dataSize];
+                    Buffer.BlockCopy(data,0,tempArray,0, dataSize);
                     data = new byte[_residualData.Length + tempArray.Length];
                     Buffer.BlockCopy(_residualData,0,data,0,_residualData.Length);
                     Buffer.BlockCopy(tempArray,0,data,_residualData.Length,tempArray.Length);
+                    dataSize = data.Length;
                 }
 
                 var maxPackets = (dataSize) / TsPacketFixedSize;
