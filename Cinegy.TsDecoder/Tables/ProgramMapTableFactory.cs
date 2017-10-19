@@ -63,7 +63,6 @@ namespace Cinegy.TsDecoder.Tables
                 InProgressTable.PcrPid = (ushort)(((packet.Payload[pos + 8] & 0x1f) << 8) + packet.Payload[pos + 9]);
                 InProgressTable.ProgramInfoLength =
                     (ushort)(((packet.Payload[pos + 10] & 0x3) << 8) + packet.Payload[pos + 11]);
-                InProgressTable.SourceData = packet.SourceData;
 
             }
 
