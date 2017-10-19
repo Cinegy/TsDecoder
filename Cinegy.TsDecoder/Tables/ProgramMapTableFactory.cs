@@ -16,6 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Cinegy.TsDecoder.TransportStream;
+using System;
 
 namespace Cinegy.TsDecoder.Tables
 {
@@ -44,7 +45,7 @@ namespace Cinegy.TsDecoder.Tables
 
                 var pos = 1 + InProgressTable.PointerField;
 
-                InProgressTable.VersionNumber = (byte)(packet.Payload[pos + 5] & 0x3E);
+                InProgressTable.VersionNumber = (byte)((packet.Payload[pos + 5] & 0x3E) >> 1);
 
                 if (ProgramMapTable?.VersionNumber == InProgressTable.VersionNumber)
                 {
@@ -92,6 +93,9 @@ namespace Cinegy.TsDecoder.Tables
                     ElementaryPid = (short)(((Data[startOfNextField + 1] & 0x1f) << 8) + Data[startOfNextField + 2]),
                     EsInfoLength = (ushort)(((Data[startOfNextField + 3] & 0x3) << 8) + Data[startOfNextField + 4])
                 };
+
+                es.SourceData = new byte[5 + es.EsInfoLength];
+                Buffer.BlockCopy(Data, startOfNextField, es.SourceData, 0, es.SourceData.Length);
 
                 var descriptors = new List<Descriptor>();
 

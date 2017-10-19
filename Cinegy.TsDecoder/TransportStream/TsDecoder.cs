@@ -228,7 +228,7 @@ namespace Cinegy.TsDecoder.TransportStream
             _sitFactory = new SpliceInfoTableFactory();
         }
 
-        public ProgramMapTable GetSelectedPmt(int programNumber)
+        public ProgramMapTable GetSelectedPmt(int programNumber = 0)
         {
             ProgramMapTable pmt;
 

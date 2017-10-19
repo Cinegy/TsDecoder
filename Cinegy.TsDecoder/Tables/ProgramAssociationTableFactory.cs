@@ -44,7 +44,7 @@ namespace Cinegy.TsDecoder.Tables
 
             var pos = 1 + InProgressTable.PointerField;
 
-            InProgressTable.VersionNumber = (byte)(packet.Payload[pos + 5] & 0x3E);
+            InProgressTable.VersionNumber = (byte)((packet.Payload[pos + 5] & 0x3E) >> 1);
             
             //if (ProgramAssociationTable != null && ProgramAssociationTable.VersionNumber == InProgressTable.VersionNumber)
             //{
@@ -65,10 +65,10 @@ namespace Cinegy.TsDecoder.Tables
             InProgressTable.Pids = new short[(InProgressTable.SectionLength - 9) / 4];
 
             var programStart = pos + 8;
+            pos = programStart;
 
             for (var i = 0; i < (InProgressTable.SectionLength - 9) / 4; i++)
             {
-                pos += 4;
                 InProgressTable.ProgramNumbers[i] =
                     (short)
                          ((packet.Payload[programStart + (i * 4)] << 8) + packet.Payload[programStart + 1 + (i * 4)]);
@@ -77,9 +77,9 @@ namespace Cinegy.TsDecoder.Tables
                     (((packet.Payload[programStart + 2 + (i * 4)] & 0x1F) << 8) +
                         packet.Payload[programStart + 3 + (i * 4)]);
 
+                pos += 4;
             }
-
-            pos += 4;
+            
             InProgressTable.Crc = ((packet.Payload[pos]) << 24) + (packet.Payload[pos + 1] << 16) +
                                   (packet.Payload[pos + 2] << 8) + (packet.Payload[pos + 3]);
 

@@ -25,5 +25,6 @@ namespace Cinegy.TsDecoder.TransportStream
         public short ElementaryPid { get; set; }
         public ushort EsInfoLength { get; set; }
         public ICollection<Descriptor> Descriptors { get; set; }
+        public byte[] SourceData { get; set; }
     }
 }
