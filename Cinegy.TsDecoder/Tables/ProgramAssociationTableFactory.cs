@@ -80,8 +80,8 @@ namespace Cinegy.TsDecoder.Tables
                 pos += 4;
             }
             
-            InProgressTable.Crc = ((packet.Payload[pos]) << 24) + (packet.Payload[pos + 1] << 16) +
-                                  (packet.Payload[pos + 2] << 8) + (packet.Payload[pos + 3]);
+            InProgressTable.Crc = (uint)(((packet.Payload[pos]) << 24) + (packet.Payload[pos + 1] << 16) +
+                                  (packet.Payload[pos + 2] << 8) + (packet.Payload[pos + 3]));
 
             if (InProgressTable.Crc == ProgramAssociationTable?.Crc) return;
 

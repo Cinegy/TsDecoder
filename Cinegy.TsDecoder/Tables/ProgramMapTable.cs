@@ -30,5 +30,6 @@ namespace Cinegy.TsDecoder.Tables
         public ushort PcrPid { get; set; }
         public ushort ProgramInfoLength { get; set; }
         public List<EsInfo> EsStreams { get; set; }
+        public uint Crc { get; set; }
     }
 }
