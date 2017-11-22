@@ -40,10 +40,32 @@ namespace Cinegy.TsDecoder.TransportStream
         }
 
         /// <summary>
+        /// Accepts a data array, and loads this data into the factory. When data is pushed, it will raise a TsPacketReady event for each TS packet that is generated.
+        /// </summary>
+        /// <param name="data">Byte array containing TS stream data</param>
+        /// <param name="dataSize">Optional length parameter to limit amount of data read from referenced array.</param>
+        public void PushData(byte[] data, int dataSize = 0, bool retainPayload = true, bool preserveSourceData = false)
+        {
+            if (dataSize == 0)
+            {
+                dataSize = data.Length;
+            }
+
+            var packets = GetTsPacketsFromData(data, dataSize,retainPayload,preserveSourceData);
+
+            foreach (var tsPacket in packets)
+            {
+                OnTsPacketReadyDetected(tsPacket);
+            }
+
+        }
+
+        /// <summary>
         /// Returns TsPackets for any input data. If data ends with incomplete packet, this is stored and prepended to next call. 
         /// If data stream is restarted, prior buffer will be skipped as sync will not be acknowledged - but any restarts should being with first byte as sync to avoid possible merging with prior data if lengths coincide.
         /// </summary>
         /// <param name="data">Aligned or unaligned data buffer containing TS packets. Aligned is more efficient if possible.</param>
+        /// <param name="dataSize">Optional length parameter to limit amount of data read from referenced array.</param>
         /// <param name="retainPayload">Optional parameter to trigger any resulting TS payload to be copied into the returned structure</param>
         /// <param name="preserveSourceData">Optional parameter to trigger complete copy of source data for TS packet to be held in array for quick access</param>
         /// <returns>Complete TS packets from this data and any prior partial data rolled over.</returns>
@@ -301,5 +323,22 @@ namespace Cinegy.TsDecoder.TransportStream
                 throw;
             }
         }
+
+        // a complete TS packet is ready for callbacks...
+        public event TsPacketReadyEventHandler TsPacketReady;
+        public delegate void TsPacketReadyEventHandler(object sender, TsPacketReadyEventArgs args);
+
+        protected virtual void OnTsPacketReadyDetected(TsPacket tsPacket)
+        {
+            var handler = TsPacketReady;
+            if (handler == null) return;
+            var args = new TsPacketReadyEventArgs { TsPacket = tsPacket };
+            handler(this, args);
+        }
+    }
+
+    public class TsPacketReadyEventArgs : EventArgs
+    {
+        public TsPacket TsPacket { get; set; }
     }
 }
