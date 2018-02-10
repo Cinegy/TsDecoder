@@ -8,7 +8,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Cinegy.TsDecoder.Tests</RootNamespace>
     <AssemblyName>Cinegy.TsDecoder.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
@@ -57,12 +57,6 @@
     <Compile Include="TransportStream\TsPacketFactoryTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Cinegy.TsDecoder\Cinegy.TsDecoder.csproj">
-      <Project>{838E853D-214B-406F-843D-A76A1FE42C6C}</Project>
-      <Name>Cinegy.TsDecoder</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="TestStreams\SD-H264-1mbps-Bars.ts" />
   </ItemGroup>
   <ItemGroup>
@@ -82,6 +76,12 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="TestStreams\11954-2017-07-09-16-05-06.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Cinegy.TsDecoder\Cinegy.TsDecoder.csproj">
+      <Project>{6d63f8ef-963f-4998-93ad-bf6dbccf3d97}</Project>
+      <Name>Cinegy.TsDecoder</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

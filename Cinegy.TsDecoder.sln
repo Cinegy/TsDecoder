@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2026
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cinegy.TsDecoder", "Cinegy.TsDecoder\Cinegy.TsDecoder.csproj", "{838E853D-214B-406F-843D-A76A1FE42C6C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cinegy.TsDecoder", "Cinegy.TsDecoder\Cinegy.TsDecoder.csproj", "{6D63F8EF-963F-4998-93AD-BF6DBCCF3D97}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cinegy.TsDecoder.Tests", "Cinegy.TsDecoder.Tests\Cinegy.TsDecoder.Tests.csproj", "{CEB0647D-769E-442B-96DC-6B4C86424878}"
 EndProject
@@ -13,10 +13,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{838E853D-214B-406F-843D-A76A1FE42C6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{838E853D-214B-406F-843D-A76A1FE42C6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{838E853D-214B-406F-843D-A76A1FE42C6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{838E853D-214B-406F-843D-A76A1FE42C6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D63F8EF-963F-4998-93AD-BF6DBCCF3D97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D63F8EF-963F-4998-93AD-BF6DBCCF3D97}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D63F8EF-963F-4998-93AD-BF6DBCCF3D97}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D63F8EF-963F-4998-93AD-BF6DBCCF3D97}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CEB0647D-769E-442B-96DC-6B4C86424878}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CEB0647D-769E-442B-96DC-6B4C86424878}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CEB0647D-769E-442B-96DC-6B4C86424878}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -24,5 +24,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7645DE27-F6F1-469E-B175-3E9E7AE03FC7}
 	EndGlobalSection
 EndGlobal
