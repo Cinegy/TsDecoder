@@ -18,11 +18,7 @@ before_build:
 - cmd: nuget restore
 after_build:
 - cmd: >-
-    7z a Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%.zip %APPVEYOR_BUILD_FOLDER%\Cinegy.TsDecoder\bin\release\Cinegy.TsDecoder.dll
-
-    appveyor PushArtifact Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%.zip
-
-    7z a Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip %APPVEYOR_BUILD_FOLDER%\Cinegy.TsDecoder\bin\release
+    7z a Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip %APPVEYOR_BUILD_FOLDER%\Cinegy.TsDecoder\bin
 
     appveyor PushArtifact Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip
 deploy:
