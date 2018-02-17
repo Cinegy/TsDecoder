@@ -1,7 +1,7 @@
 version: 2.1.0
 branches:
   only:
-  - master
+  - Branch_v2.1.0
 configuration: Release
 assembly_info:
   patch: true
