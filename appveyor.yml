@@ -7,8 +7,8 @@ configuration: Release
 dotnet_csproj:
   patch: true
   file: '**\*.csproj'
-  version: '{version}'
-  package_version: '{version}'
+  version: '{version}-beta'
+  package_version: '{version}-beta'
   assembly_version: '{version}'
   file_version: '{version}'
   informational_version: '{version}-beta'
