@@ -117,7 +117,10 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public ServiceDescriptor GetServiceDescriptorForProgramNumber(int? programNumber)
         {
-            if (programNumber == null) return null;
+            if (programNumber == null)
+                programNumber = _patFactory?.ProgramAssociationTable?.ProgramNumbers?.Where(i => i > 0).FirstOrDefault();
+
+            if (programNumber == 0) return null;
 
             var serviceDescItem = _sdtFactory?.ServiceDescriptionItems?.SingleOrDefault(
                                   i => i.ServiceId == programNumber);

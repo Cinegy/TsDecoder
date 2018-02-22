@@ -76,11 +76,11 @@ namespace Cinegy.TsDecoder.Tables
 
             InProgressTable.EsStreams = ReadEsInfoElements(InProgressTable.SectionLength, startOfNextField);
 
-            var crcPos = InProgressTable.PointerField + InProgressTable.SectionLength;
-
-            InProgressTable.Crc = (uint)(((packet.Payload[crcPos]) << 24) + (packet.Payload[crcPos + 1] << 16) +
-                                  (packet.Payload[crcPos + 2] << 8) + (packet.Payload[crcPos + 3]));
-
+            var crcPos = InProgressTable.PointerField + InProgressTable.SectionLength - 1; //+3 for start, -4 for len CRC = -1
+        
+            InProgressTable.Crc = (uint)((Data[crcPos] << 24) + (Data[crcPos+1] <<16) + 
+                                         (Data[crcPos + 2] << 8) + Data[crcPos + 3]);
+                        
             ProgramMapTable = InProgressTable;
 
             OnTableChangeDetected();

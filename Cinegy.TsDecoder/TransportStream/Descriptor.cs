@@ -1865,22 +1865,22 @@ namespace Cinegy.TsDecoder.TransportStream
     {
         public ParentalRatingDescriptor(byte[] stream, int start) : base(stream, start)
         {
+            if (ParentalRatings == null) ParentalRatings = new List<int>();
+
             var lastindex = start + 2;
             try
             {
-                if (DescriptorLength != 0)
-                {
-                    var length = DescriptorLength;
+                if (DescriptorLength == 0) return;
+                var length = DescriptorLength;
 
-                    while (length != 0)
-                    {
-                        CountryCode = Encoding.UTF8.GetString(stream, lastindex, 3);
-                        lastindex += 3;
-                        var parentalRating = (int)(stream[lastindex]);
-                        lastindex++;
-                        ParentalRatings.Add(parentalRating);
-                        length -= 4;
-                    }
+                while (length != 0)
+                {
+                    CountryCode = Encoding.UTF8.GetString(stream, lastindex, 3);
+                    lastindex += 3;
+                    var parentalRating = (int)(stream[lastindex]);
+                    lastindex++;
+                    ParentalRatings.Add(parentalRating);
+                    length -= 4;
                 }
             }
             catch (IndexOutOfRangeException)

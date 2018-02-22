@@ -16,6 +16,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
         [TestCase(@"TestStreams\11954-2017-07-09-16-05-06.ts")]
         [TestCase(@"TestStreams\11720-2017-07-09-16-01-43.ts")]
+        //[TestCase(@"C:\Users\lewis\OneDrive\Temp\BBCHD-DVBS2Mux-19thSept2016-20160919-105050.ts")]
         public void ReadDescriptorsFromTestStreams(string file)
         {
             var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, file);
