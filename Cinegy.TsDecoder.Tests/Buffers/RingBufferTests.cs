@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using Cinegy.TsDecoder.Buffers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Cinegy.TsDecoder.Tests.Buffers
 {
-    [TestClass()]
+    [TestFixture]
     public class RingBufferTests
     {
         private readonly List<int> _bufferSizes = new List<int> { 12, 188, 376, 512, 564, 1024, 1316, 1500, 2048, 16000, 32000, 64000, ushort.MaxValue, ushort.MaxValue + 1, ushort.MaxValue + 2 }; //, 2 ^ 17, 2 ^ 17 + 1, 2 ^ 18, 2 ^ 19 };
 
-        [TestMethod()]
+        [Test]
         public void RingBufferTest()
         {
             foreach (var size in _bufferSizes)
@@ -27,7 +26,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             }
         }
 
-        [TestMethod()]
+        [Test]
         public void OverflowBufferTest()
         {
             var dataCount = 12;
@@ -47,7 +46,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             }
         }
 
-        [TestMethod()]
+        [Test]
         public void JaggedAddTest()
         {
             var dataCount = 8;
@@ -86,7 +85,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             }
         }
 
-        [TestMethod()]
+        [Test]
         public void AddTest()
         {
             foreach (var size in _bufferSizes)
@@ -105,7 +104,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             }
         }
 
-        [TestMethod()]
+        [Test]
         public void RemoveTest()
         {
             foreach (var size in _bufferSizes)
@@ -147,7 +146,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             }
         }
 
-        [TestMethod()]
+        [Test]
         public void BufferFullnessTest()
         {
             foreach (var size in _bufferSizes)

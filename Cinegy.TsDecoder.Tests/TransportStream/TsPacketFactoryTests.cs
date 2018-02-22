@@ -5,17 +5,18 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Cinegy.TsDecoder.TransportStream;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace Cinegy.TsDecoder.Tests.TransportStream
 {
-    [TestClass()]
+    [TestFixture]
     public class TsPacketFactoryTests
     {
-        [TestMethod()]
+        [Test]
         public void GetTsPacketsFromDataTest()
         {
-            const string filename = @"..\..\TestStreams\SD-H264-1mbps-Bars.ts";
+            const string filename = @"TestStreams\SD-H264-1mbps-Bars.ts";
+            var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, filename);
 
             const int expectedPacketCount = 10493;
             var sizes = new List<int> { 188, 376, 512, 564, 1024, 1316, 1500, 2048 };
@@ -23,22 +24,24 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             foreach (var size in sizes)
             {
                 Console.WriteLine($"Testing file {filename} with block size {size}");
-                PerformUnalignedDataTest(filename, expectedPacketCount, size);
+                PerformUnalignedDataTest(testFile, expectedPacketCount, size);
             }
         }
 
-        [TestMethod()]
-        public void ReadServiceNamesFromDataTest()
+        [TestCase(@"TestStreams\cut-2ts.ts")]
+        [TestCase(@"TestStreams\cut-bbchd-dvbs2mux.ts")]
+        public void ReadServiceNamesFromDataTest(string filename)
         {
-            ProcessFileForServiceNames(@"..\..\TestStreams\cut-2ts.ts");
-            ProcessFileForServiceNames(@"..\..\TestStreams\cut-bbchd-dvbs2mux.ts");
+            var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, filename);
+            ProcessFileForServiceNames(testFile);
         }
 
-        [TestMethod()]
+        [Test]
         public void ReadEsFromStream()
         {
             //ProcessFileForStreams(@"D:\Data\OneDrive\Temp\DVBT2-HEVC-EAC3-SHORT.ts");
-            ProcessFileForStreams(@"..\..\TestStreams\D2-TS-HD-AC3-Blue-45mbps.ts");
+            var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, @"TestStreams\D2-TS-HD-AC3-Blue-45mbps.ts");
+            ProcessFileForStreams(testFile);
         }
 
         private void ProcessFileForStreams(string sourceFileName)
@@ -185,7 +188,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
                     if (decoder.ServiceDescriptionTable?.ItemsIncomplete == false)
                     {
-                        Debug.WriteLine($"Terminating read at position {stream.Position} after detection of embedded service names completed.");
+                        Console.WriteLine($"Terminating read at position {stream.Position} after detection of embedded service names completed.");
                         break;
                     }
 
@@ -217,7 +220,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
             foreach (var serviceDescriptionItem in decoder.ServiceDescriptionTable.Items)
             {
-                Debug.WriteLine(decoder.GetServiceDescriptorForProgramNumber(serviceDescriptionItem.ServiceId).ServiceName);
+                Console.WriteLine(decoder.GetServiceDescriptorForProgramNumber(serviceDescriptionItem.ServiceId).ServiceName);
             }
         }
 

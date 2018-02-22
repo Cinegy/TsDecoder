@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 using Cinegy.TsDecoder.TransportStream;
+using NUnit.Framework;
 
 namespace Cinegy.TsDecoder.Tests.TransportStream
 {
-    [TestClass()]
+    [TestFixture]
     public class DescriptorTests
     {
 
-        [TestMethod()]
-        public void ReadDescriptorsFromTestStreams()
+        [TestCase(@"TestStreams\11954-2017-07-09-16-05-06.ts")]
+        [TestCase(@"TestStreams\11720-2017-07-09-16-01-43.ts")]
+        public void ReadDescriptorsFromTestStreams(string file)
         {
-            ProcessFileForDescriptors(@"..\..\TestStreams\11954-2017-07-09-16-05-06.ts");
+            var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, file);
+            ProcessFileForDescriptors(testFile);
             
-           // ProcessFileForDescriptors(@"D:\Data\OneDrive\Temp\DVBT2-HEVC-EAC3-SHORT.ts");
         }
 
         private static void ProcessFileForDescriptors(string sourceFileName)
@@ -51,6 +53,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
                     if (decoder.ServiceDescriptionTable != null && decoder.ServiceDescriptionTable.ItemsIncomplete != true)
                     {
+                        
                         if (decoder.ServiceDescriptionTable.TableId != 0x42) continue;
                         foreach (var program in decoder.ProgramMapTables)
                         {

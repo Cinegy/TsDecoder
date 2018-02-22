@@ -19,4 +19,8 @@
     <Folder Include="Properties\" />
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' != 'net461' ">
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.4.0" />
+  </ItemGroup>
+
 </Project>

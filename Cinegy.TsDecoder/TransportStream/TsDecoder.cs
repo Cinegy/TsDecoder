@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Cinegy.TsDecoder.Tables;
 
 namespace Cinegy.TsDecoder.TransportStream
@@ -47,6 +48,10 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public TsDecoder()
         {
+
+#if !NET461
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+#endif
             SetupFactories();
         }
 
