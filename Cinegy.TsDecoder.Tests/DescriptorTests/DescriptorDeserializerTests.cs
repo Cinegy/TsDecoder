@@ -19,6 +19,8 @@ namespace Cinegy.TsDecoder.Tests.DescriptorTests
             Assert.IsNotNull(descriptor);
             Assert.AreEqual(descriptor.TransportStreamId,0x12);
             Assert.AreEqual(descriptor.OriginalNetworkId, 0x600);
+            Assert.AreEqual(descriptor.ServiceId, 0x4544);
+            Assert.AreEqual(descriptor.LinkageType, 0x5);
         }
     }
 }

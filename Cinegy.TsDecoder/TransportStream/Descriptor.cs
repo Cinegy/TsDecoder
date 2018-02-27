@@ -2082,9 +2082,13 @@ namespace Cinegy.TsDecoder.TransportStream
         {
             try
             {
-                TransportStreamId = (ushort) ((Data[0] << 8) + Data[1]);
+                TransportStreamId = (ushort)((Data[0] << 8) + Data[1]);
 
-                OriginalNetworkId = (ushort) ((Data[2] << 8) + Data[3]);
+                OriginalNetworkId = (ushort)((Data[2] << 8) + Data[3]);
+
+                ServiceId = (ushort)((Data[4] << 8) + Data[5]);
+
+                LinkageType = Data[6];
 
                 //TODO: rest of message
             }
@@ -2097,6 +2101,8 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public ushort TransportStreamId { get; }
         public ushort OriginalNetworkId { get; }
+        public ushort ServiceId { get; }
+        public byte LinkageType {get;}
     }
 
     public static class DescriptorFactory
