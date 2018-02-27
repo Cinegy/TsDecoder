@@ -2069,6 +2069,36 @@ namespace Cinegy.TsDecoder.TransportStream
         }
     }
 
+    /// <summary>
+    /// A Linkage Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) table 57 </i> or alternate versions.
+    /// </remarks>
+    public class LinkageDescriptor : Descriptor
+    {
+        public LinkageDescriptor(byte[] stream, int start) : base(stream, start)
+        {
+            try
+            {
+                TransportStreamId = (ushort) ((Data[0] << 8) + Data[1]);
+
+                OriginalNetworkId = (ushort) ((Data[2] << 8) + Data[3]);
+
+                //TODO: rest of message
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw new ArgumentOutOfRangeException("The Linkage Descriptor Message is short!");
+            }
+
+        }
+
+        public ushort TransportStreamId { get; }
+        public ushort OriginalNetworkId { get; }
+    }
+
     public static class DescriptorFactory
     {
         public static Descriptor DescriptorFromData(byte[] stream, int start)
@@ -2094,6 +2124,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 case 0x47: return new BouquetNameDescriptor(stream, start);
                 case 0x48: return new ServiceDescriptor(stream, start);
                 case 0x49: return new CountryAvailabilityDescriptor(stream, start);
+                case 0x4A: return new LinkageDescriptor(stream, start);
                 case 0x4D: return new ShortEventDescriptor(stream, start);
                 case 0x4E: return new ExtendedEventDescriptor(stream, start);
                 case 0x50: return new ComponentDescriptor(stream, start);
