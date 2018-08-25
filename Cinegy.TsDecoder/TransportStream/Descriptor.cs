@@ -2048,25 +2048,35 @@ namespace Cinegy.TsDecoder.TransportStream
         public ushort[] CaSystemIds { get; set; }
     }
     /// <summary>
-    /// A Ca System Descriptor <see cref="Descriptor"/>.
+    /// A Scrambling Descriptor <see cref="Descriptor"/>.
     /// </summary>
     /// <remarks>
     /// For details please refer to the original documentation,
     /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
     /// </remarks>
-    public class CaSystemDescriptor : Descriptor
+    public class ScramblingDescriptor : Descriptor
     {
-        public CaSystemDescriptor(byte[] stream, int start) : base(stream, start)
+        public ScramblingDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            var lastindex = start + 2;
+
+            var lastIndex = start + 2;
+
             try
             {
+                if (DescriptorLength != 0)
+                {
+                    ScramblingMode = (int)((stream[lastIndex + 0] << 8) + stream[lastIndex + 1]);
+                    lastIndex += 4;
+                }
             }
             catch (IndexOutOfRangeException)
             {
-                throw new ArgumentOutOfRangeException("The CA System Descriptor Message is short!");
+                throw (new ArgumentOutOfRangeException("The Scrambling Descriptor message is short"));
             }
         }
+
+        public int ScramblingMode { get; private set; }
+
     }
 
     /// <summary>
@@ -2182,7 +2192,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 case 0x5a: return new TerrestrialDeliverySystemDescriptor(stream, start);
                 case 0x5F: return new PrivateDataSpecifierDescriptor(stream, start);
                 case 0x64: return new DataBroadcastDescriptor(stream, start);
-                case 0x65: return new CaSystemDescriptor(stream, start);
+                case 0x65: return new ScramblingDescriptor(stream, start);
                 case 0x66: return new DataBroadcastIdDescriptor(stream, start);
                 case 0x6a: return new Ac3Descriptor(stream, start);
                 case 0x7a: return new Eac3Descriptor(stream, start);
