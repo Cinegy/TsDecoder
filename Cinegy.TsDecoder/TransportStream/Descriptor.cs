@@ -2104,7 +2104,48 @@ namespace Cinegy.TsDecoder.TransportStream
         public ushort ServiceId { get; }
         public byte LinkageType {get;}
     }
+    /// <summary>
+    /// A Logical Channel Number Descriptor 0x83 <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
+    public class LcnDescriptor : Descriptor
+    {
+        public class LogicalchannelnumberItem
+        {
+            private ushort serviceID;
+            private bool visibleServiceFlag;
+            private byte reserved;
+            private ushort logicalChannelNumber;
 
+            public ushort ServiceID { get { return this.serviceID; } set { this.serviceID = value; } }
+            public bool VisibleServiceFlag { get { return this.visibleServiceFlag; } set { this.visibleServiceFlag = value; } }
+            public byte Reserved { get { return this.reserved; } set { this.reserved = value; } }
+            public ushort LogicalChannelNumber { get { return this.logicalChannelNumber; } set { this.logicalChannelNumber = value; } }
+        }
+
+        private ArrayList logicalChannelNumbers = new ArrayList();
+
+
+        public LcnDescriptor(byte[] stream, int start)
+            : base(stream, start)
+        {
+
+            for (int idx = start + 2; idx < start + this.DescriptorLength - 1; idx += 4)
+            {
+                LogicalchannelnumberItem lcnItem = new LogicalchannelnumberItem();
+                lcnItem.ServiceID = (ushort)((stream[idx] << 8) | (stream[idx + 1]));
+                lcnItem.VisibleServiceFlag = (((stream[idx + 2] >> 7) & 0x01)) != 0; ;
+                lcnItem.Reserved = (byte)(stream[idx + 2] >> 2 & 0x1F);
+                lcnItem.LogicalChannelNumber = (ushort)(((stream[idx + 2] & 0x02) << 8) | (stream[idx + 3]));
+                this.logicalChannelNumbers.Add(lcnItem);
+            }
+
+        }
+        public ArrayList LogicalChannelNumbers { get { return this.logicalChannelNumbers; } }
+    }
     public static class DescriptorFactory
     {
         public static Descriptor DescriptorFromData(byte[] stream, int start)
@@ -2146,7 +2187,8 @@ namespace Cinegy.TsDecoder.TransportStream
                 case 0x65: return new CaSystemDescriptor(stream, start);
                 case 0x66: return new DataBroadcastIdDescriptor(stream, start);
                 case 0x6a: return new Ac3Descriptor(stream, start);
-                case 0x7a: return new Eac3Descriptor(stream, start);                
+                case 0x7a: return new Eac3Descriptor(stream, start);
+                case 0x83: return new LcnDescriptor(stream, start);            
                 case 0x8A: return new CueIdentifierDescriptor(stream, start);
                 default: return new Descriptor(stream, start);
             }
