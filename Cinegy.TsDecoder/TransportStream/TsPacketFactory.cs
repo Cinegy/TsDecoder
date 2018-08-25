@@ -27,6 +27,8 @@ namespace Cinegy.TsDecoder.TransportStream
 
         private byte[] _residualData;
 
+        private long _packetCounter = 0;
+
         public readonly int TsPacketFixedSize = 188;
 
         public TsPacketFactory()
@@ -75,7 +77,7 @@ namespace Cinegy.TsDecoder.TransportStream
             {
                 if(dataSize == 0) { dataSize = data.Length; }
 
-                if (_residualData != null)
+                if (_residualData != null && _residualData.Length>0)
                 {
                     var tempArray = new byte[dataSize];
                     Buffer.BlockCopy(data,0,tempArray,0, dataSize);
@@ -105,7 +107,8 @@ namespace Cinegy.TsDecoder.TransportStream
                         AdaptationFieldExists = (data[start + 3] & 0x20) != 0,
                         ContainsPayload = (data[start + 3] & 0x10) != 0,
                         ContinuityCounter = (short)(data[start + 3] & 0xF),
-                        SourceBufferIndex = start
+                        SourceBufferIndex = start, 
+                        PacketNum = ++_packetCounter
                     };
 
                     if(preserveSourceData)
@@ -135,11 +138,8 @@ namespace Cinegy.TsDecoder.TransportStream
                                 AdaptationFieldExtensionFlag = (data[start + 5] & 0x1) != 0
                             };
 
-                            if (tsPacket.AdaptationField.FieldSize >= payloadSize)
+                            if (tsPacket.AdaptationField.FieldSize >= payloadSize) //corrupt packet
                             {
-#if DEBUG
-                                Debug.WriteLine("TS packet data adaptationFieldSize >= payloadSize");
-#endif
                                 return null;
                             }
                             
@@ -166,69 +166,12 @@ namespace Cinegy.TsDecoder.TransportStream
                             }
 
 
-                            payloadSize -= tsPacket.AdaptationField.FieldSize;
-                            payloadOffs += tsPacket.AdaptationField.FieldSize;
+                            payloadSize -= tsPacket.AdaptationField.FieldSize + 1;
+                            payloadOffs += tsPacket.AdaptationField.FieldSize + 1;
                         }
 
-                        if (tsPacket.ContainsPayload && tsPacket.PayloadUnitStartIndicator)
-                        {
-                            if (payloadOffs > (dataSize - 2) || data[payloadOffs] != 0 || data[payloadOffs + 1] != 0 || data[payloadOffs + 2] != 1)
-                            {
-#if DEBUG
-                                //    Debug.WriteLine("PES syntax error: no PES startcode found, or payload offset exceeds boundary of data");
-#endif
-                            }
-                            else
-                            {
-                                tsPacket.PesHeader = new PesHdr
-                                {
-                                    StartCode = (uint)((data[payloadOffs] << 16) + (data[payloadOffs + 1] << 8) + data[payloadOffs + 2]),
-                                    StreamId = data[payloadOffs + 3],
-                                    PacketLength = (ushort)((data[payloadOffs + 4] << 8) + data[payloadOffs + 5]),
-                                    Pts = -1,
-                                    Dts = -1
-                                };
-
-                                tsPacket.PesHeader.HeaderLength = (byte)tsPacket.PesHeader.PacketLength;
-
-                                var stmrId = tsPacket.PesHeader.StreamId; //just copying to small name to make code less huge and slightly faster...
-
-                                if ((stmrId != (uint)PesStreamTypes.ProgramStreamMap) &&
-                                    (stmrId != (uint)PesStreamTypes.PaddingStream) &&
-                                    (stmrId != (uint)PesStreamTypes.PrivateStream2) &&
-                                    (stmrId != (uint)PesStreamTypes.ECMStream) &&
-                                    (stmrId != (uint)PesStreamTypes.EMMStream) &&
-                                    (stmrId != (uint)PesStreamTypes.ProgramStreamDirectory) &&
-                                    (stmrId != (uint)PesStreamTypes.DSMCCStream) &&
-                                    (stmrId != (uint)PesStreamTypes.H2221TypeEStream))
-                                {
-                                    var ptsDtsFlag = data[payloadOffs + 7] >> 6;
-
-                                    tsPacket.PesHeader.HeaderLength = (byte)(9 + data[payloadOffs + 8]); ;
-
-                                    switch (ptsDtsFlag)
-                                    {
-                                        case 2:
-                                            tsPacket.PesHeader.Pts = Get_TimeStamp(2, data, payloadOffs + 9);
-                                            break;
-                                        case 3:
-                                            tsPacket.PesHeader.Pts = Get_TimeStamp(3, data, payloadOffs + 9);
-                                            tsPacket.PesHeader.Dts = Get_TimeStamp(1, data, payloadOffs + 14);
-                                            break;
-                                        case 1:
-                                            throw new Exception("PES Syntax error: pts_dts_flag = 1");
-                                    }
-                                }
-
-                                tsPacket.PesHeader.Payload = new byte[tsPacket.PesHeader.HeaderLength];
-                                Buffer.BlockCopy(data, payloadOffs, tsPacket.PesHeader.Payload, 0, tsPacket.PesHeader.HeaderLength);
-
-                                payloadOffs += tsPacket.PesHeader.HeaderLength;
-                                payloadSize -= tsPacket.PesHeader.HeaderLength;
-                            }
-                        }
-
-                        if (payloadSize > 1 && retainPayload)
+                      
+                        if (payloadSize >= 1 && retainPayload)
                         {
                             tsPacket.Payload = new byte[payloadSize];
                             Buffer.BlockCopy(data, payloadOffs, tsPacket.Payload, 0, payloadSize);
@@ -245,12 +188,11 @@ namespace Cinegy.TsDecoder.TransportStream
                         break;  // but this is strange!
                 }
 
-                if ((start + TsPacketFixedSize) != dataSize)
-                {
-                    //we have 'residual' data to carry over to next call
-                    _residualData = new byte[dataSize - start];
-                    Buffer.BlockCopy(data,start,_residualData,0, dataSize - start);
-                }
+                if (start == dataSize) return tsPackets;
+
+                //we have 'residual' data to carry over to next call (jagged data input)
+                _residualData = new byte[dataSize - start];
+                Buffer.BlockCopy(data,start,_residualData,0, dataSize - start);
 
                 return tsPackets;
             }
@@ -263,34 +205,6 @@ namespace Cinegy.TsDecoder.TransportStream
             return null;
         }
 
-        private static long Get_TimeStamp(int code, IList<byte> data, int offs)
-        {
-            if (data == null) throw new ArgumentNullException(nameof(data));
-
-            if (code == 0)
-            {
-                Debug.WriteLine("Method has been called with incorrect code to match against - check for fault in calling method.");
-                throw new Exception("PES Syntax error: 0 value timestamp code check passed in");
-            }
-
-            if ((data[offs + 0] >> 4) != code)
-                throw new Exception("PES Syntax error: Wrong timestamp code");
-
-            if ((data[offs + 0] & 1) != 1)
-                throw new Exception("PES Syntax error: Invalid timestamp marker bit");
-
-            if ((data[offs + 2] & 1) != 1)
-                throw new Exception("PES Syntax error: Invalid timestamp marker bit");
-
-            if ((data[offs + 4] & 1) != 1)
-                throw new Exception("PES Syntax error: Invalid timestamp marker bit");
-
-            long a = (data[offs + 0] >> 1) & 7;
-            long b = (data[offs + 1] << 7) | (data[offs + 2] >> 1);
-            long c = (data[offs + 3] << 7) | (data[offs + 4] >> 1);
-
-            return (a << 30) | (b << 15) | c;
-        }
 
         public static int FindSync(IList<byte> tsData, int offset, int TsPacketSize)
         {
