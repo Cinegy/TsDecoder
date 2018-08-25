@@ -2052,7 +2052,7 @@ namespace Cinegy.TsDecoder.TransportStream
     /// </summary>
     /// <remarks>
     /// For details please refer to the original documentation,
-    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) Table 84</i> or alternate versions.
     /// </remarks>
     public class ScramblingDescriptor : Descriptor
     {
@@ -2084,7 +2084,7 @@ namespace Cinegy.TsDecoder.TransportStream
     /// </summary>
     /// <remarks>
     /// For details please refer to the original documentation,
-    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) table 57 </i> or alternate versions.
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) Table 57 </i> or alternate versions.
     /// </remarks>
     public class LinkageDescriptor : Descriptor
     {
@@ -2154,6 +2154,93 @@ namespace Cinegy.TsDecoder.TransportStream
         }
         public IEnumerable<LogicalchannelnumberItem> LogicalChannelNumbers { get ; }
     }
+    /// <summary>
+    /// A AAC Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) Table H.1 </i> or alternate versions.
+    /// </remarks>
+    public class AACDescriptor : Descriptor
+    {
+        /*DTSAudioStreamDescriptor(){
+         * descriptor_tag               8   uimsbf
+         * descriptor_lengh             8   uimsbf
+         * profile_and_level            8   uimsbf
+         * aac_type_flag                1   bslbf
+         * saoc_de_flag                 1   bslbf
+         * reserve_for future_use       6   bslbf
+         * if(aac_type_flag==1){          
+         *    aac_type                  8   uimsbf
+         * }         
+         * for(i=0;i<N;i++){
+         *      additional_info_byte    8   bslbf
+         */
+        public AACDescriptor(byte[]stream,int start)
+            :base(stream, start)
+        {
+            var idx = start + 2;
+            try
+            {
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw new ArgumentOutOfRangeException("The AAC Descriptor Message is short!");
+            }
+        }
+        public byte[] ProfileAndLevel { get; }
+        public bool AACTypeFlag { get; }
+        public bool SAOCDETypeFlag { get; }
+        public byte[] AACType { get; }
+        public byte[] AdditionalInfoBytes { get; }
+
+    }
+    /// <summary>
+    /// A DTS Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) table G.1: DTS Audio Descriptor </i> or alternate versions.
+    /// </remarks>
+    public class DTSDescriptor : Descriptor
+    {
+        /*DTSAudioStreamDescriptor(){
+         * descriptor_tag               8   uimsbf
+         * descriptor_lengh             8   uimsbf
+         * sample_rate_code             4   bslbf
+         * bit_rate_code                6   bslbf
+         * nblks                        7   bslbf
+         * fsize                        14  uimsbf
+         * surround_mode                6   bslbf
+         * lfeflag                      1   uimsbf
+         * extended_surround_flag       2   uimsbf
+         * for(i=0;i<N;i++){
+         *      additional_info_byte    8   bslbf
+         */
+
+        public DTSDescriptor(byte[] stream, int start)
+            : base(stream, start)
+        {
+            var idx = start + 2;
+            try
+            {
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw new ArgumentOutOfRangeException("The DTS Descriptor Message is short!");
+            }
+        }
+
+        public byte SamplerateCode { get; }
+        public byte Bitrate { get; }
+        public byte NBLKS { get; }
+        public byte FSize { get; }
+        public byte SuroundMode { get; }
+        public bool LFEFlag { get; }
+        public bool ExtendedSurroundFlag { get; }
+        public byte[] AdditionalInfoBytes { get; }
+    }
+
     public static class DescriptorFactory
     {
         public static Descriptor DescriptorFromData(byte[] stream, int start)
@@ -2196,6 +2283,8 @@ namespace Cinegy.TsDecoder.TransportStream
                 case 0x66: return new DataBroadcastIdDescriptor(stream, start);
                 case 0x6a: return new Ac3Descriptor(stream, start);
                 case 0x7a: return new Eac3Descriptor(stream, start);
+                case 0x7b: return new DTSDescriptor(stream, start);
+                case 0x7c: return new AACDescriptor(stream, start);
                 case 0x83: return new LcnDescriptor(stream, start);            
                 case 0x8A: return new CueIdentifierDescriptor(stream, start);
                 default: return new Descriptor(stream, start);
