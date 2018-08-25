@@ -2124,13 +2124,13 @@ namespace Cinegy.TsDecoder.TransportStream
             public bool VisibleServiceFlag { get { return this.visibleServiceFlag; } set { this.visibleServiceFlag = value; } }
             public byte Reserved { get { return this.reserved; } set { this.reserved = value; } }
             public ushort LogicalChannelNumber { get { return this.logicalChannelNumber; } set { this.logicalChannelNumber = value; } }
-        }        
-        
+        }
 
+        private List<LogicalchannelnumberItem> logicalChannelNumbers = new List<LogicalchannelnumberItem>();
         public LcnDescriptor(byte[] stream, int start)
             : base(stream, start)
         {
-            var logicalChannelNumbers = new List<LogicalchannelnumberItem>();
+            
             for (int idx = start + 2; idx < start + this.DescriptorLength - 1; idx += 4)
             {
                 LogicalchannelnumberItem lcnItem = new LogicalchannelnumberItem();
@@ -2138,7 +2138,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 lcnItem.VisibleServiceFlag = (((stream[idx + 2] >> 7) & 0x01)) != 0; ;
                 lcnItem.Reserved = (byte)(stream[idx + 2] >> 2 & 0x1F);
                 lcnItem.LogicalChannelNumber = (ushort)(((stream[idx + 2] & 0x02) << 8) | (stream[idx + 3]));
-                this.logicalChannelNumbers.Add(lcnItem);
+                logicalChannelNumbers.Add(lcnItem);
             }
             LogicalChannelNumbers = logicalChannelNumbers;
         }
