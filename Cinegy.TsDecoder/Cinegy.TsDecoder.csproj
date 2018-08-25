@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net461;netcoreapp2.0</TargetFrameworks>
-    <Version>3.0.0-beta</Version>
+    <TargetFrameworks>net461;netcoreapp2.1</TargetFrameworks>
+    <Version>3.0.1</Version>
     <Authors>Lewis Kirkaldie</Authors>
     <Company>Cinegy GmbH</Company>
     <Description>An MPEG2 Transport Stream decoder, in C# using NET Framework 4.6.1 and NET Standard 2.0</Description>
@@ -10,9 +10,10 @@
     <PackageTags>Transport Stream MPEGTS</PackageTags>
     <PackageLicenseUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/Cinegy/TsDecoder</PackageProjectUrl>
-    <PackageReleaseNotes>Now with multiple builds targetting NET Framework and NET Standard 2.0</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated to NetCore 2.1, now marked as stable</PackageReleaseNotes>
     <NeutralLanguage />
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +21,11 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' != 'net461' ">
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.4.0" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.0" />
   </ItemGroup>
 
 </Project>

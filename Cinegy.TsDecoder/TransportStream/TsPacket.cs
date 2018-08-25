@@ -15,17 +15,6 @@
 
 namespace Cinegy.TsDecoder.TransportStream
 {
-    public struct PesHdr
-    {
-        public uint StartCode;
-        public byte StreamId;
-        public ushort PacketLength;
-        public long Pts;
-        public long Dts;
-        public byte[] Payload;
-        public byte HeaderLength;
-    }
-
     public struct TsPacket
     {
         public byte SyncByte; //should always be 0x47 - indicates start of a TS packet
@@ -37,11 +26,12 @@ namespace Cinegy.TsDecoder.TransportStream
         public bool AdaptationFieldExists;
         public bool ContainsPayload;
         public short ContinuityCounter;
-        public PesHdr PesHeader;
+        //public Header Header;
         public byte[] Payload;
         public AdaptationField AdaptationField;
         public byte[] SourceData; //original data used to construct packet (if chosen to retain)
         public int SourceBufferIndex; //index into original data buffer used to construct packet
+        public long PacketNum; //just for debugging - remove from production
     }
 
     public struct AdaptationField

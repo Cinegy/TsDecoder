@@ -14,6 +14,8 @@
 */
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
@@ -40,79 +42,173 @@ namespace Cinegy.TsDecoder.TransportStream
 
     public class Pes
     {
+        private PesHeader _header;
         public const uint DefaultPacketStartCodePrefix = 0x000001;
         
-        public uint PacketStartCodePrefix { get; set; } //3 bytes 	0x000001
-        public byte StreamId { get; set; } //	1 byte 	Examples: Audio streams (0xC0-0xDF), Video streams (0xE0-0xEF) [4][5][6][7]
-                                           //Note: The above 4 bytes is called the 32 bit start code.
-        public ushort PesPacketLength { get; set; } //	2 bytes 	Specifies the number of bytes remaining in the packet after this field. Can be zero. If the PES packet length is set to zero, the PES packet can be of any length. A value of zero for the PES packet length can be used only when the PES packet payload is a video elementary stream.[8]
+        public PesHeader Header => _header;
+
         public OptionalPes OptionalPesHeader { get; set; } //	variable length (length >= 9) 	not present in case of Padding stream & Private stream 2 (navigation data)
-        public byte[] Data { get; set; } //		See elementary stream. In the case of private streams the first byte of the payload is the sub-stream number.
+
+        public byte[] Data
+        {
+            get
+            {
+                if (_data.Length == _pesBytes) return _data;
+
+                var buff = new byte[_pesBytes];
+                Buffer.BlockCopy(_data,0,buff,0,_pesBytes);
+                return buff;
+            }
+        } //		See elementary stream. In the case of private streams the first byte of the payload is the sub-stream number.
 
         private ushort _pesBytes;
         private readonly byte[] _data;
 
         public Pes(TsPacket packet)
         {
-            PacketStartCodePrefix = (uint)((packet.PesHeader.Payload[0] << 16) + (packet.PesHeader.Payload[1] << 8) + packet.PesHeader.Payload[2]);
-            StreamId = packet.PesHeader.Payload[3];
-            PesPacketLength = (ushort)((packet.PesHeader.Payload[4] << 8) + packet.PesHeader.Payload[5]);
-            _data = new byte[PesPacketLength + 6];
+            PopulateHeader(packet);
 
-            Buffer.BlockCopy(packet.PesHeader.Payload, 0, _data, _pesBytes, packet.PesHeader.Payload.Length);
-            _pesBytes += (ushort)(packet.PesHeader.Payload.Length);
-            Buffer.BlockCopy(packet.Payload, 0, _data, _pesBytes, packet.Payload.Length);
-            _pesBytes += (ushort)(packet.Payload.Length);
+            var bufferSize = _header.PacketLength - _header.HeaderLength - 3;
+            if (bufferSize < 1)
+            {
+                //unknown buffer size - allocate max anticipated encoded frame size
+                bufferSize = 144 * 8 * 1024; //approx big enough for 8 DV25 frames - will do for now
+            }
+        
+            _data = new byte[bufferSize];
+            
+            Buffer.BlockCopy(packet.Payload, Header.HeaderLength + 9, _data, _pesBytes, packet.Payload.Length - Header.HeaderLength - 9);
+            _pesBytes += (ushort)(packet.Payload.Length - Header.HeaderLength - 9);
         }
 
         public bool HasAllBytes()
         {
-            return _pesBytes >= PesPacketLength + 6 && PesPacketLength > 0;
+            return _pesBytes >= _header.PacketLength && _header.PacketLength > 0;
         }
 
         public bool Add(TsPacket packet)
         {
             if (packet.PayloadUnitStartIndicator) return false;
 
-            if ((PesPacketLength + 6 - _pesBytes) > packet.Payload.Length)
+            if (_data.Length - _pesBytes >= packet.Payload.Length)
             {
                 Buffer.BlockCopy(packet.Payload, 0, _data, _pesBytes, packet.Payload.Length);
-                _pesBytes += (ushort)(packet.Payload.Length);
+                _pesBytes += (ushort)packet.Payload.Length;
             }
             else
             {
-                Buffer.BlockCopy(packet.Payload, 0, _data, _pesBytes, (PesPacketLength + 6 - _pesBytes));
-                _pesBytes += (ushort)(PesPacketLength + 6 - _pesBytes);
+                Buffer.BlockCopy(packet.Payload, 0, _data, _pesBytes, _data.Length - _pesBytes);
+                _pesBytes += (ushort)(_data.Length - _pesBytes);
             }
 
             return true;
         }
 
-        public bool Decode()
+        private void PopulateHeader(TsPacket tsPacket)
         {
-            if (!HasAllBytes()) return false;
+            if (!tsPacket.ContainsPayload || !tsPacket.PayloadUnitStartIndicator) return;
+            
+            var data = tsPacket.Payload;
 
-            OptionalPesHeader = new OptionalPes
+            var startCode = (uint)((data[0] << 16) + (data[1] << 8) +
+                                   data[2]);
+
+            if (startCode != 1) return;
+
+            _header = new PesHeader
             {
-                MarkerBits = (byte) ((_data[6] >> 6) & 0x03),
-                ScramblingControl = (byte) ((_data[6] >> 4) & 0x03),
-                Priority = (_data[6] & 0x08) == 0x08,
-                DataAlignmentIndicator = (_data[6] & 0x04) == 0x04,
-                Copyright = (_data[6] & 0x02) == 0x02,
-                OriginalOrCopy = (_data[6] & 0x01) == 0x01,
-                PtsdtsIndicator = (byte) ((_data[7] >> 6) & 0x03),
-                EscrFlag = (_data[7] & 0x20) == 0x20,
-                EsRateFlag = (_data[7] & 0x10) == 0x10,
-                DsmTrickModeFlag = (_data[7] & 0x08) == 0x08,
-                AdditionalCopyInfoFlag = (_data[7] & 0x04) == 0x04,
-                CrcFlag = (_data[7] & 0x02) == 0x02,
-                ExtensionFlag = (_data[7] & 0x01) == 0x01,
-                PesHeaderLength = _data[8]
+                StartCode = 1,
+                StreamId = data[3],
+                PacketLength = (ushort)((data[4] << 8) + data[5]),
+                Pts = -1,
+                Dts = -1
             };
             
-            Data = _data;
+            if (_header.StreamId != (uint)PesStreamTypes.ProgramStreamMap &&
+                _header.StreamId != (uint)PesStreamTypes.PaddingStream &&
+                _header.StreamId != (uint)PesStreamTypes.PrivateStream2 &&
+                _header.StreamId != (uint)PesStreamTypes.ECMStream &&
+                _header.StreamId != (uint)PesStreamTypes.EMMStream &&
+                _header.StreamId != (uint)PesStreamTypes.ProgramStreamDirectory &&
+                _header.StreamId != (uint)PesStreamTypes.DSMCCStream &&
+                _header.StreamId != (uint)PesStreamTypes.H2221TypeEStream)
+            {
+                var ptsDtsFlag = data[7] >> 6;
 
-            return true;
+                _header.HeaderLength = data[8];
+
+                switch (ptsDtsFlag)
+                {
+                    case 2:
+                        _header.Pts = Get_TimeStamp(2, data, 9);
+                        break;
+                    case 3:
+                        _header.Pts = Get_TimeStamp(3, data, 9);
+                        _header.Dts = Get_TimeStamp(1, data, 14);
+                        break;
+                    case 1:
+                        throw new Exception("PES Syntax error: pts_dts_flag = 1");
+                }
+            }
+
+            _header.Payload = new byte[_header.HeaderLength];
+            Buffer.BlockCopy(data, 0, _header.Payload, 0, _header.HeaderLength);
         }
+
+        private static long Get_TimeStamp(int code, IList<byte> data, int offs)
+        {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+
+            if (code == 0)
+            {
+                Debug.WriteLine("Method has been called with incorrect code to match against - check for fault in calling method.");
+                throw new Exception("PES Syntax error: 0 value timestamp code check passed in");
+            }
+
+            if (data[offs + 0] >> 4 != code)
+                throw new Exception("PES Syntax error: Wrong timestamp code");
+
+            if ((data[offs + 0] & 1) != 1)
+                throw new Exception("PES Syntax error: Invalid timestamp marker bit");
+
+            if ((data[offs + 2] & 1) != 1)
+                throw new Exception("PES Syntax error: Invalid timestamp marker bit");
+
+            if ((data[offs + 4] & 1) != 1)
+                throw new Exception("PES Syntax error: Invalid timestamp marker bit");
+
+            long a = (data[offs + 0] >> 1) & 7;
+            long b = (data[offs + 1] << 7) | (data[offs + 2] >> 1);
+            long c = (data[offs + 3] << 7) | (data[offs + 4] >> 1);
+
+            return (a << 30) | (b << 15) | c;
+        }
+
+        //public bool Decode()
+        //{
+        //    if (!HasAllBytes()) return false;
+
+        //    //OptionalPesHeader = new OptionalPes
+        //    //{
+        //    //    MarkerBits = (byte) ((_data[6] >> 6) & 0x03),
+        //    //    ScramblingControl = (byte) ((_data[6] >> 4) & 0x03),
+        //    //    Priority = (_data[6] & 0x08) == 0x08,
+        //    //    DataAlignmentIndicator = (_data[6] & 0x04) == 0x04,
+        //    //    Copyright = (_data[6] & 0x02) == 0x02,
+        //    //    OriginalOrCopy = (_data[6] & 0x01) == 0x01,
+        //    //    PtsdtsIndicator = (byte) ((_data[7] >> 6) & 0x03),
+        //    //    EscrFlag = (_data[7] & 0x20) == 0x20,
+        //    //    EsRateFlag = (_data[7] & 0x10) == 0x10,
+        //    //    DsmTrickModeFlag = (_data[7] & 0x08) == 0x08,
+        //    //    AdditionalCopyInfoFlag = (_data[7] & 0x04) == 0x04,
+        //    //    CrcFlag = (_data[7] & 0x02) == 0x02,
+        //    //    ExtensionFlag = (_data[7] & 0x01) == 0x01,
+        //    //    PesHeaderLength = _data[8]
+        //    //};
+
+        //    Data = _data;
+
+        //    return true;
+        //}
     }
 }
