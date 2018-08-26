@@ -2202,10 +2202,10 @@ namespace Cinegy.TsDecoder.TransportStream
                 throw new ArgumentOutOfRangeException("The AAC Descriptor Message is short!");
             }
         }
-        public byte[] ProfileAndLevel { get; }
-        public bool AACTypeFlag { get; }
+        public byte ProfileAndLevel { get; }
+        public int AACTypeFlag { get; }
         public bool SAOCDETypeFlag { get; }
-        public byte[] AACType { get; }
+        public byte AACType { get; }
         public byte[] AdditionalInfoBytes { get; }
 
     }
@@ -2254,13 +2254,13 @@ namespace Cinegy.TsDecoder.TransportStream
             }
         }
 
-        public byte SamplerateCode { get; }
-        public byte Bitrate { get; }
-        public byte NumberOfBlocks { get; }
-        public byte FrameSize { get; }
-        public byte SuroundMode { get; }
-        public bool LFEFlag { get; }
-        public bool ExtendedSurroundFlag { get; }
+        public int SamplerateCode { get; }
+        public int Bitrate { get; }
+        public int NumberOfBlocks { get; }
+        public int FrameSize { get; }
+        public int SuroundMode { get; }
+        public int LFEFlag { get; }
+        public int ExtendedSurroundFlag { get; }
         public byte[] AdditionalInfoBytes { get; }
     }
 
