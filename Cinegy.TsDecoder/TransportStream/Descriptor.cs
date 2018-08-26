@@ -2182,6 +2182,20 @@ namespace Cinegy.TsDecoder.TransportStream
             var idx = start + 2;
             try
             {
+                var headerLength = 2;
+                ProfileAndLevel = stream[2];
+                AACTypeFlag = (stream[3] >> 7) & 0x01;
+
+                var i = 4;
+                if (AACTypeFlag == 0x01)
+                {
+                    headerLength++;
+                    AACType = stream[i++];
+                }
+
+                AdditionalInfoBytes = new byte[DescriptorLength - headerLength];
+                Buffer.BlockCopy(stream, stream[i], AdditionalInfoBytes, 0, DescriptorLength - headerLength);
+
             }
             catch (IndexOutOfRangeException)
             {
@@ -2224,6 +2238,15 @@ namespace Cinegy.TsDecoder.TransportStream
             var idx = start + 2;
             try
             {
+                SamplerateCode = (stream[2] >> 4) & 0x0f;
+                Bitrate = ((stream[2] & 0x0f) << 2) | (stream[3] >> 6) & 0x02;
+                NumberOfBlocks = ((stream[3] & 0x3f) << 2) | (stream[4] >> 7) & 0x01;
+                FrameSize = ((stream[4] & 0x7f) << 7) | (stream[5] >> 1);
+                SuroundMode = ((stream[5] & 0x01) << 6) | (stream[6] >> 3) & 0x1f;
+                LFEFlag = (stream[6] >> 2) & 0x01;
+                ExtendedSurroundFlag = stream[6] & 0x03;
+                AdditionalInfoBytes = new byte[DescriptorLength - 5];
+                Buffer.BlockCopy(stream, stream[7], AdditionalInfoBytes, 0, DescriptorLength - 5);               
             }
             catch (IndexOutOfRangeException)
             {
@@ -2233,8 +2256,8 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public byte SamplerateCode { get; }
         public byte Bitrate { get; }
-        public byte NBLKS { get; }
-        public byte FSize { get; }
+        public byte NumberOfBlocks { get; }
+        public byte FrameSize { get; }
         public byte SuroundMode { get; }
         public bool LFEFlag { get; }
         public bool ExtendedSurroundFlag { get; }
