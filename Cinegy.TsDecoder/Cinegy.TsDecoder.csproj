@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net461;netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <Version>3.0.0-beta</Version>
     <Authors>Lewis Kirkaldie</Authors>
     <Company>Cinegy GmbH</Company>
@@ -10,7 +10,7 @@
     <PackageTags>Transport Stream MPEGTS</PackageTags>
     <PackageLicenseUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/Cinegy/TsDecoder</PackageProjectUrl>
-    <PackageReleaseNotes>Now with multiple builds targetting NET Framework and NET Standard 2.0</PackageReleaseNotes>
+    <PackageReleaseNotes>Now targetting only NET Standard 2.0</PackageReleaseNotes>
     <NeutralLanguage />
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
