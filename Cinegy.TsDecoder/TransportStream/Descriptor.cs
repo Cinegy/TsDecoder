@@ -2048,25 +2048,35 @@ namespace Cinegy.TsDecoder.TransportStream
         public ushort[] CaSystemIds { get; set; }
     }
     /// <summary>
-    /// A Ca System Descriptor <see cref="Descriptor"/>.
+    /// A Scrambling Descriptor <see cref="Descriptor"/>.
     /// </summary>
     /// <remarks>
     /// For details please refer to the original documentation,
-    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) Table 84</i> or alternate versions.
     /// </remarks>
-    public class CaSystemDescriptor : Descriptor
+    public class ScramblingDescriptor : Descriptor
     {
-        public CaSystemDescriptor(byte[] stream, int start) : base(stream, start)
+        public ScramblingDescriptor(byte[] stream, int start) : base(stream, start)
         {
-            var lastindex = start + 2;
+
+            var lastIndex = start + 2;
+
             try
             {
+                if (DescriptorLength != 0)
+                {
+                    ScramblingMode = (int)((stream[lastIndex + 0] << 8) + stream[lastIndex + 1]);
+                    lastIndex += 4;
+                }
             }
             catch (IndexOutOfRangeException)
             {
-                throw new ArgumentOutOfRangeException("The CA System Descriptor Message is short!");
+                throw (new ArgumentOutOfRangeException("The Scrambling Descriptor message is short"));
             }
         }
+
+        public int ScramblingMode { get; private set; }
+
     }
 
     /// <summary>
@@ -2074,7 +2084,7 @@ namespace Cinegy.TsDecoder.TransportStream
     /// </summary>
     /// <remarks>
     /// For details please refer to the original documentation,
-    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) table 57 </i> or alternate versions.
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) Table 57 </i> or alternate versions.
     /// </remarks>
     public class LinkageDescriptor : Descriptor
     {
@@ -2103,6 +2113,155 @@ namespace Cinegy.TsDecoder.TransportStream
         public ushort OriginalNetworkId { get; }
         public ushort ServiceId { get; }
         public byte LinkageType {get;}
+    }
+    /// <summary>
+    /// A Logical Channel Number Descriptor 0x83 <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03)</i> or alternate versions.
+    /// </remarks>
+    public class LcnDescriptor : Descriptor
+    {
+        public class LogicalchannelnumberItem
+        {
+            private ushort serviceID;
+            private bool visibleServiceFlag;
+            private byte reserved;
+            private ushort logicalChannelNumber;
+
+            public ushort ServiceID { get { return this.serviceID; } set { this.serviceID = value; } }
+            public bool VisibleServiceFlag { get { return this.visibleServiceFlag; } set { this.visibleServiceFlag = value; } }
+            public byte Reserved { get { return this.reserved; } set { this.reserved = value; } }
+            public ushort LogicalChannelNumber { get { return this.logicalChannelNumber; } set { this.logicalChannelNumber = value; } }
+        }
+
+        private List<LogicalchannelnumberItem> logicalChannelNumbers = new List<LogicalchannelnumberItem>();
+        public LcnDescriptor(byte[] stream, int start)
+            : base(stream, start)
+        {
+            
+            for (int idx = start + 2; idx < start + this.DescriptorLength - 1; idx += 4)
+            {
+                LogicalchannelnumberItem lcnItem = new LogicalchannelnumberItem();
+                lcnItem.ServiceID = (ushort)((stream[idx] << 8) | (stream[idx + 1]));
+                lcnItem.VisibleServiceFlag = (((stream[idx + 2] >> 7) & 0x01)) != 0; ;
+                lcnItem.Reserved = (byte)(stream[idx + 2] >> 2 & 0x1F);
+                lcnItem.LogicalChannelNumber = (ushort)(((stream[idx + 2] & 0x02) << 8) | (stream[idx + 3]));
+                logicalChannelNumbers.Add(lcnItem);
+            }
+            LogicalChannelNumbers = logicalChannelNumbers;
+        }
+        public IEnumerable<LogicalchannelnumberItem> LogicalChannelNumbers { get ; }
+    }
+    /// <summary>
+    /// A AAC Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) Table H.1 </i> or alternate versions.
+    /// </remarks>
+    public class AACDescriptor : Descriptor
+    {
+        /*DTSAudioStreamDescriptor(){
+         * descriptor_tag               8   uimsbf
+         * descriptor_lengh             8   uimsbf
+         * profile_and_level            8   uimsbf
+         * aac_type_flag                1   bslbf
+         * saoc_de_flag                 1   bslbf
+         * reserve_for future_use       6   bslbf
+         * if(aac_type_flag==1){          
+         *    aac_type                  8   uimsbf
+         * }         
+         * for(i=0;i<N;i++){
+         *      additional_info_byte    8   bslbf
+         */
+        public AACDescriptor(byte[]stream,int start)
+            :base(stream, start)
+        {
+            var idx = start + 2;
+            try
+            {
+                var headerLength = 2;
+                ProfileAndLevel = stream[2];
+                AACTypeFlag = (stream[3] >> 7) & 0x01;
+
+                var i = 4;
+                if (AACTypeFlag == 0x01)
+                {
+                    headerLength++;
+                    AACType = stream[i++];
+                }
+
+                AdditionalInfoBytes = new byte[DescriptorLength - headerLength];
+                Buffer.BlockCopy(stream, stream[i], AdditionalInfoBytes, 0, DescriptorLength - headerLength);
+
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw new ArgumentOutOfRangeException("The AAC Descriptor Message is short!");
+            }
+        }
+        public byte ProfileAndLevel { get; }
+        public int AACTypeFlag { get; }
+        public bool SAOCDETypeFlag { get; }
+        public byte AACType { get; }
+        public byte[] AdditionalInfoBytes { get; }
+
+    }
+    /// <summary>
+    /// A DTS Descriptor <see cref="Descriptor"/>.
+    /// </summary>
+    /// <remarks>
+    /// For details please refer to the original documentation,
+    /// e.g. <i>ETSI EN 300 468 V1.15.1 (2016-03) table G.1: DTS Audio Descriptor </i> or alternate versions.
+    /// </remarks>
+    public class DTSDescriptor : Descriptor
+    {
+        /*DTSAudioStreamDescriptor(){
+         * descriptor_tag               8   uimsbf
+         * descriptor_lengh             8   uimsbf
+         * sample_rate_code             4   bslbf
+         * bit_rate_code                6   bslbf
+         * nblks                        7   bslbf
+         * fsize                        14  uimsbf
+         * surround_mode                6   bslbf
+         * lfeflag                      1   uimsbf
+         * extended_surround_flag       2   uimsbf
+         * for(i=0;i<N;i++){
+         *      additional_info_byte    8   bslbf
+         */
+
+        public DTSDescriptor(byte[] stream, int start)
+            : base(stream, start)
+        {
+            var idx = start + 2;
+            try
+            {
+                SamplerateCode = (stream[2] >> 4) & 0x0f;
+                Bitrate = ((stream[2] & 0x0f) << 2) | (stream[3] >> 6) & 0x02;
+                NumberOfBlocks = ((stream[3] & 0x3f) << 2) | (stream[4] >> 7) & 0x01;
+                FrameSize = ((stream[4] & 0x7f) << 7) | (stream[5] >> 1);
+                SuroundMode = ((stream[5] & 0x01) << 6) | (stream[6] >> 3) & 0x1f;
+                LFEFlag = (stream[6] >> 2) & 0x01;
+                ExtendedSurroundFlag = stream[6] & 0x03;
+                AdditionalInfoBytes = new byte[DescriptorLength - 5];
+                Buffer.BlockCopy(stream, stream[7], AdditionalInfoBytes, 0, DescriptorLength - 5);               
+            }
+            catch (IndexOutOfRangeException)
+            {
+                throw new ArgumentOutOfRangeException("The DTS Descriptor Message is short!");
+            }
+        }
+
+        public int SamplerateCode { get; }
+        public int Bitrate { get; }
+        public int NumberOfBlocks { get; }
+        public int FrameSize { get; }
+        public int SuroundMode { get; }
+        public int LFEFlag { get; }
+        public int ExtendedSurroundFlag { get; }
+        public byte[] AdditionalInfoBytes { get; }
     }
 
     public static class DescriptorFactory
@@ -2143,10 +2302,13 @@ namespace Cinegy.TsDecoder.TransportStream
                 case 0x5a: return new TerrestrialDeliverySystemDescriptor(stream, start);
                 case 0x5F: return new PrivateDataSpecifierDescriptor(stream, start);
                 case 0x64: return new DataBroadcastDescriptor(stream, start);
-                case 0x65: return new CaSystemDescriptor(stream, start);
+                case 0x65: return new ScramblingDescriptor(stream, start);
                 case 0x66: return new DataBroadcastIdDescriptor(stream, start);
                 case 0x6a: return new Ac3Descriptor(stream, start);
-                case 0x7a: return new Eac3Descriptor(stream, start);                
+                case 0x7a: return new Eac3Descriptor(stream, start);
+                case 0x7b: return new DTSDescriptor(stream, start);
+                case 0x7c: return new AACDescriptor(stream, start);
+                case 0x83: return new LcnDescriptor(stream, start);            
                 case 0x8A: return new CueIdentifierDescriptor(stream, start);
                 default: return new Descriptor(stream, start);
             }
