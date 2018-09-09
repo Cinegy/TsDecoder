@@ -92,15 +92,108 @@ namespace Cinegy.TsDecoder.TransportStream
 
                 switch (newPacket.Pid)
                 {
+
                     case (short)PidType.PatPid:
-                        _patFactory.AddPacket(newPacket);
+                        //PAT
+                        if(newPacket.Payload[5]== 0x00)
+                        { _patFactory.AddPacket(newPacket); }
+                        //CAT
+                        else if (newPacket.Payload[5] == 0x01)
+                        {
+                            //TODO creation of BAT Table Structure
+                        }                        
+                            break;
+                    case (short)PidType.NitPid:
+                        //NIT actual
+                        if (newPacket.Payload[5] == 0x40)
+                        {
+                            _nitFactory.AddPacket(newPacket);
+                        }
+                        //NIT other
+                        else if (newPacket.Payload[5] == 0x41)
+                        {
+                            _nitFactory.AddPacket(newPacket);
+                        }
+                        //Stuffing Table
+                        else if (newPacket.Payload[5] == 0x72)
+                        {
+                            //TODO creation of ST Table Structure
+                        }
                         break;
                     case (short)PidType.SdtPid:
-                        _sdtFactory.AddPacket(newPacket);
+                        //SDT actual
+                        if (newPacket.Payload[5] == 0x42)
+                        {
+                            _sdtFactory.AddPacket(newPacket);
+                        }
+                        //SDT other
+                        if (newPacket.Payload[5] == 0x46)
+                        {
+                            _sdtFactory.AddPacket(newPacket);
+                        }
+                        //BAT 
+                        if (newPacket.Payload[5] == 0x4A)
+                        {
+                            //TODO creation of BAT Table Structure 
+                        }
+                        //Stuffing Table
+                        else if (newPacket.Payload[5] == 0x72)
+                        {
+                            //TODO creation of ST Table Structure
+                        }
                         break;
                     case (short)PidType.EitPid:
-                        _eitFactory.AddPacket(newPacket);
+                        //EIT Present/Following Actual
+                        if (newPacket.Payload[5] == 0x4E)
+                        { _eitFactory.AddPacket(newPacket); }
+                        //Eit Present/Following Other
+                        else if (newPacket.Payload[5] == 0x4F)
+                        { _eitFactory.AddPacket(newPacket); }
+                        //EIT Schedule Actual
+                        else if (newPacket.Payload[5] >= 0x50 && newPacket.Payload[5] <= 0x5F)
+                        { _eitFactory.AddPacket(newPacket); }
+                        //EIT Schedule Other
+                        else if (newPacket.Payload[5] >= 0x60 && newPacket.Payload[5] <= 0x6F)
+                        { _eitFactory.AddPacket(newPacket); }
+                        //Stuffing Table
+                        else if (newPacket.Payload[5] == 0x72)
+                        {
+                            //TODO creation of ST Table Structure
+                        }
                         break;
+                    case (short)PidType.RstStPid:
+                        {
+                            //Running Status Table
+                            if (newPacket.Payload[5] == 0x71)
+                            {
+                                //TODO creation of RST Table Structure
+                            }
+                            //Stuffing Table
+                            else if (newPacket.Payload[5] == 0x72)
+                            {
+                                //TODO creation of ST Table Structure
+                            }
+                            break;
+                        }
+                    case (short)PidType.TdtTotPid:
+                        {
+                            //Time Date Table
+                            if (newPacket.Payload[5] == 0x70)
+                            { 
+                                //TODO creation of TDT Table Structure
+                            }
+                            //Time Offset Table
+                            else if (newPacket.Payload[5] == 0x73)
+                            { 
+                                //TODO creation of TOT Table Structure
+                            }
+                            //Stuffing Table
+                            else if (newPacket.Payload[5] == 0x72)
+                            {
+                                //TODO creation of ST Table Structure
+                            }
+                            break;
+                        }
                     case 2048:
                         _sitFactory.AddPacket(newPacket);
                         break;
