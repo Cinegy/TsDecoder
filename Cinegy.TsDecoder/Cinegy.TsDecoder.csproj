@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <Version>3.0.0-beta</Version>
+    <Version>3.0.1-beta</Version>
     <Authors>Lewis Kirkaldie</Authors>
     <Company>Cinegy GmbH</Company>
-    <Description>An MPEG2 Transport Stream decoder, in C# using NET Framework 4.6.1 and NET Standard 2.0</Description>
+    <Description>An MPEG2 Transport Stream decoder, in C# using NET Standard 2.0</Description>
     <Copyright>Cinegy GmbH</Copyright>
     <PackageTags>Transport Stream MPEGTS</PackageTags>
-    <PackageLicenseUrl>http://www.apache.org/licenses/LICENSE-2.0</PackageLicenseUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Cinegy/TsDecoder</PackageProjectUrl>
     <PackageReleaseNotes>Now targetting only NET Standard 2.0</PackageReleaseNotes>
     <NeutralLanguage />
@@ -17,9 +17,6 @@
 
   <ItemGroup>
     <Folder Include="Properties\" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' != 'net461' ">
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.4.0" />
   </ItemGroup>
 
