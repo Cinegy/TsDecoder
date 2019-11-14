@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Cinegy.TsDecoder.Buffers;
 using NUnit.Framework;
 
@@ -26,23 +27,87 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             }
         }
 
-        [Test]
-        public void OverflowBufferTest()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void OverflowBufferTest(bool allowOverflow)
         {
-            var dataCount = 12;
+            var bufferSize = 12;
+            var dataCount = 16;
             var dataSize = 1;
+            var didExcept = false;
 
-            Console.WriteLine($"Testing buffer addition for buffer size {dataCount}");
+            Console.WriteLine($"Testing buffer addition for buffer size {bufferSize} with {dataCount} elements");
             try
             {
-                var buffer = new RingBuffer(dataCount, 1);
+                var buffer = new RingBuffer(bufferSize, 1, allowOverflow);
 
-                FillBufferWithFakeData(buffer, dataSize, dataCount + 2);
+                FillBufferWithFakeData(buffer, dataSize, dataCount);
+                var checkValueBuffer = new byte[1];
+                buffer.Peek(dataCount-bufferSize-2, ref checkValueBuffer, out int dataPeekLength);
+
+                if (checkValueBuffer[0] != dataCount -1)
+                    Assert.Fail($"Unexpected value at circled buffer location - expected {dataCount -1}, found {checkValueBuffer[0]}");
+
+                for(int i = 4; i<dataCount; i++)
+                {
+                    buffer.Remove(ref checkValueBuffer, out int dataLength, out ulong timestamp);
+                    if(checkValueBuffer[0] != i)
+                        Assert.Fail($"Unexpected value at circled buffer location - expected {dataCount - 1}, found {checkValueBuffer[0]}");
+                }
             }
             catch (Exception ex)
             {
                 if(!(ex is OverflowException))
                     Assert.Fail($"Failed LoopedBufferTest with buffer size {dataCount} - {ex.Message}");
+
+                didExcept = true;
+            }
+
+            if(allowOverflow && didExcept)
+                Assert.Fail($"Failed LoopedBufferTest with buffer size {dataCount} - overflow should be permitted, but OverflowException was thrown.");
+
+        }
+
+        [Test]
+        public void ThreadedLoopedTest()
+        {
+            var bufferSize = 12;
+            var dataSize = 1;
+            var cycleCount = 255;
+
+            var data = new byte[dataSize];
+            var buffer = new RingBuffer(bufferSize, 1, true);
+
+            var ts = new ThreadStart(delegate
+            {
+                AddingThread(buffer, cycleCount);
+            });
+
+            var addingThread = new Thread(ts) { Priority = ThreadPriority.Highest };
+
+            addingThread.Start();
+
+            for (int i = 0; i < 255; i++)
+            {
+                data[0] = (byte)i;
+                buffer.Remove(ref data, out int dataLength, out ulong timestamp);
+
+                if(data[0]!=i)
+                    Assert.Fail($"Failed ThreadedLoopedBufferTest with buffer size {bufferSize} - expected value {i}, got {data[0]}.");
+            }
+        }
+        
+        private static void AddingThread(RingBuffer buffer, int cycleCount)
+        {
+            var dataSize = 1;
+            var data = new byte[dataSize];
+
+            for (int i = 0; i < cycleCount; i++)
+            {
+                data[0] = (byte)i;
+                buffer.Add(ref data);
+
+                Thread.Sleep(1);
             }
         }
 

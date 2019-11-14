@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2019 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ namespace Cinegy.TsDecoder.Buffers
         private int _nextAddPos;
         private int _lastRemPos;
         private bool _wrapped;
+        private bool _allowOverflow;
 
         private readonly object _lockObj = new object();
 
@@ -44,10 +45,11 @@ namespace Cinegy.TsDecoder.Buffers
             ResetBuffers();
         }
 
-        public RingBuffer(int bufferSize, int packetSize = 1500)
+        public RingBuffer(int bufferSize, int packetSize = 1500, bool allowOverflow = false)
         {
             _bufferSize = bufferSize;
             _packetSize = packetSize;
+            _allowOverflow = allowOverflow;
             ResetBuffers();
         }
         
@@ -87,17 +89,21 @@ namespace Cinegy.TsDecoder.Buffers
             {
                 if (BufferFullness == BufferSize)
                 {
-                    throw new OverflowException("Ringbuffer has overflowed");    
+                    if(!_allowOverflow){
+                        throw new OverflowException("Ringbuffer has overflowed");
+                    }
+                    else{
+                        _lastRemPos++;
+                    }
                 }
 
                 if (data.Length <= _packetSize)
-                {
-                   
+                {                         
                     //good data size
                     Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
                     _dataLength[_nextAddPos] = data.Length;
                     _timestamp[_nextAddPos++] = timestamp;
-
+                    
                     if (_nextAddPos > _bufferSize)
                     {
                         _nextAddPos = (_nextAddPos % _bufferSize - 1);
