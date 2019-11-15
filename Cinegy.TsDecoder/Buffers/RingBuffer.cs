@@ -99,16 +99,16 @@ namespace Cinegy.TsDecoder.Buffers
 
                 if (data.Length <= _packetSize)
                 {
-                    if (_nextAddPos > _bufferSize)
-                    {
-                        _nextAddPos = (_nextAddPos % _bufferSize - 1);
-                        _wrapped = true;
-                    }
                     //good data size
                     Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
                     _dataLength[_nextAddPos] = data.Length;
                     _timestamp[_nextAddPos++] = timestamp;
                     
+                    if (_nextAddPos > _bufferSize)
+                    {
+                        _nextAddPos = (_nextAddPos % _bufferSize - 1);
+                        _wrapped = true;
+                    }
 
                     _waitHandle.Set();
                 }
