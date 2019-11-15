@@ -98,7 +98,7 @@ namespace Cinegy.TsDecoder.Buffers
                 }
 
                 if (data.Length <= _packetSize)
-                {                         
+                {
                     //good data size
                     Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
                     _dataLength[_nextAddPos] = data.Length;

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <Version>3.0.2-beta</Version>
+    <Version>3.0.3</Version>
     <Authors>Lewis Kirkaldie</Authors>
     <Company>Cinegy GmbH</Company>
     <Description>An MPEG2 Transport Stream decoder, in C# using NET Standard 2.0</Description>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using Cinegy.TsDecoder.Buffers;
 using NUnit.Framework;
@@ -96,7 +97,79 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                     Assert.Fail($"Failed ThreadedLoopedBufferTest with buffer size {bufferSize} - expected value {i}, got {data[0]}.");
             }
         }
-        
+
+
+        [Test]
+        public void ThreadedLoopedPeekTest()
+        {
+            //this test creates a thread to reliably add a buffer sample with a new element added every 5 milliseconds.
+            //it then consumes the buffer, taking a randomized time between 1 and 8 ms to eat a sample - it should trigger the
+            //buffer to fill and empty with some realistic behaviour
+
+            var bufferSize = 48;
+            var dataSize = 1;
+            var cycleCount = 409;
+
+            var data = new byte[dataSize];
+            var buffer = new RingBuffer(bufferSize, 1, true);
+
+            var ts = new ThreadStart(delegate
+            {
+                AddingThread(buffer, cycleCount);
+            });
+
+            var addingThread = new Thread(ts) { Priority = ThreadPriority.Highest };
+
+            addingThread.Start();
+
+            var readPosition = 0;
+            var iterationCount = 0;
+            byte expectedVal = 0;
+
+            var randomGenerator = new Random();
+            var stringResult = new StringBuilder(1024);
+            var sleepCount = 0;
+
+            while (addingThread.IsAlive)
+            {
+                var randSleep = randomGenerator.Next(1, 8);
+
+                if (readPosition > buffer.BufferSize)
+                    readPosition = 0;
+
+                if (readPosition == buffer.NextAddPosition)
+                {
+                    Thread.Sleep(randSleep);
+                    sleepCount++;
+                    continue;
+                }
+
+                data[0] = 0;
+                try
+                {
+                    buffer.Peek(readPosition, ref data, out int dataLength);
+                }
+                catch(Exception ex)
+                {
+                    Assert.Fail($"Failed ThreadedLoopedBufferTest on read iteration {iterationCount} - exception: {ex.Message}.");
+                }
+                var result = data[0];
+
+                if (result != expectedVal)
+                    Assert.Fail($"Failed ThreadedLoopedBufferTest on read iteration {iterationCount} - expected value {expectedVal}, got {result}.");
+                    
+                stringResult.Append($"{result},");
+
+                expectedVal = ++result;
+                readPosition++;
+                iterationCount++;
+                
+            }
+
+            Console.WriteLine($"Sleep count: {sleepCount}");
+            Console.WriteLine(stringResult.ToString());
+        }
+
         private static void AddingThread(RingBuffer buffer, int cycleCount)
         {
             var dataSize = 1;
@@ -106,8 +179,8 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             {
                 data[0] = (byte)i;
                 buffer.Add(ref data);
-
-                Thread.Sleep(1);
+             
+                Thread.Sleep(5);
             }
         }
 
