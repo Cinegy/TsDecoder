@@ -96,7 +96,47 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                     Assert.Fail($"Failed ThreadedLoopedBufferTest with buffer size {bufferSize} - expected value {i}, got {data[0]}.");
             }
         }
-        
+
+
+        [Test]
+        public void ThreadedLoopedPeekTest()
+        {
+            var bufferSize = 48;
+            var dataSize = 1;
+            var cycleCount = 255;
+
+            var data = new byte[dataSize];
+            var buffer = new RingBuffer(bufferSize, 1, true);
+
+            var ts = new ThreadStart(delegate
+            {
+                AddingThread(buffer, cycleCount);
+            });
+
+            var addingThread = new Thread(ts) { Priority = ThreadPriority.Highest };
+
+            addingThread.Start();
+
+            var readPosition = 0;
+            byte lastVal = 0;
+
+            while (addingThread.IsAlive)
+            {
+                if (readPosition == buffer.NextAddPosition)
+                {
+                    Thread.Sleep(1);
+                }
+
+                data[0] = 0;
+                buffer.Peek(readPosition++, ref data, out int dataLength);
+                var result = data[0];
+
+                if (result != lastVal++)
+                    Assert.Fail($"Failed ThreadedLoopedBufferTest with buffer size {bufferSize} - expected value {lastVal-1}, got {result}.");
+                
+            }
+        }
+
         private static void AddingThread(RingBuffer buffer, int cycleCount)
         {
             var dataSize = 1;
@@ -107,7 +147,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                 data[0] = (byte)i;
                 buffer.Add(ref data);
 
-                Thread.Sleep(1);
+                Thread.Sleep(10);
             }
         }
 
