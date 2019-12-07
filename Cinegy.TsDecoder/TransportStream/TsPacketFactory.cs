@@ -204,7 +204,7 @@ namespace Cinegy.TsDecoder.TransportStream
                                 {
                                     var ptsDtsFlag = data[payloadOffs + 7] >> 6;
 
-                                    tsPacket.PesHeader.HeaderLength = (byte)(9 + data[payloadOffs + 8]); ;
+                                    tsPacket.PesHeader.HeaderLength = (byte)(9 + data[payloadOffs + 8]);
 
                                     switch (ptsDtsFlag)
                                     {
