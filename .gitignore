@@ -6,3 +6,4 @@ TestResults
 *.user
 /Cinegy.TsDecoder/project.lock.json
 /packages
+/Cinegy.TsDecoder/Properties/PublishProfiles/FolderProfile.pubxml

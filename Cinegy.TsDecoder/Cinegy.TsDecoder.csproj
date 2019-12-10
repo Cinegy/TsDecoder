@@ -10,7 +10,7 @@
     <PackageTags>Transport Stream MPEGTS</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Cinegy/TsDecoder</PackageProjectUrl>
-    <PackageReleaseNotes>Updated System.Text.Encoding.CodePages from 4.6.0 to 4.7.0</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated unit tests to netcore3</PackageReleaseNotes>
     <NeutralLanguage />
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
