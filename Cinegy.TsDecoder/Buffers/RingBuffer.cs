@@ -30,16 +30,26 @@ namespace Cinegy.TsDecoder.Buffers
         private int _lastRemPos;
         private bool _wrapped;
         private bool _allowOverflow;
+        private long _ticksPerMs;
 
         private readonly object _lockObj = new object();
-
-        private readonly int _bufferSize = ushort.MaxValue;
         private readonly int _packetSize = 1500;
 
         static EventWaitHandle _waitHandle = new AutoResetEvent(false);
 
-        private long TimerFreq { get; } = Stopwatch.Frequency/1000;
+        public long StopwatchTicksPerMillisecond
+        {
+            get
+            {
+                if (_ticksPerMs < 1)
+                {
+                    _ticksPerMs = Stopwatch.Frequency / 1000;
+                }
 
+                return _ticksPerMs;
+            }
+        }
+    
         public RingBuffer()
         {
             ResetBuffers();
@@ -47,7 +57,7 @@ namespace Cinegy.TsDecoder.Buffers
 
         public RingBuffer(int bufferSize, int packetSize = 1500, bool allowOverflow = false)
         {
-            _bufferSize = bufferSize;
+            BufferSize = bufferSize;
             _packetSize = packetSize;
             _allowOverflow = allowOverflow;
             ResetBuffers();
@@ -58,11 +68,11 @@ namespace Cinegy.TsDecoder.Buffers
             lock (_lockObj)
             {
                 //allocate buffer and zero
-                _buffer = new byte[_bufferSize + 1][];
-                _timestamp = new ulong[_bufferSize + 1];
-                _dataLength = new int[_bufferSize + 1];
+                _buffer = new byte[BufferSize + 1][];
+                _timestamp = new ulong[BufferSize + 1];
+                _dataLength = new int[BufferSize + 1];
 
-                for (var n = 0; n <= _bufferSize; ++n)
+                for (var n = 0; n <= BufferSize; ++n)
                 {
                     _buffer[n] = new byte[_packetSize];
                 }
@@ -75,7 +85,7 @@ namespace Cinegy.TsDecoder.Buffers
         /// <param name="data"></param>
         public void Add(ref byte[] data)
         {
-           Add(ref data, (ulong)(Stopwatch.GetTimestamp() / TimerFreq));
+           Add(ref data, CurrentTimestamp());
         }
 
         /// <summary>
@@ -100,13 +110,13 @@ namespace Cinegy.TsDecoder.Buffers
                 if (data.Length <= _packetSize)
                 {
                     //good data size
-                    Buffer.BlockCopy(data, 0, _buffer[_nextAddPos], 0, data.Length);
+                    Array.Copy(data,_buffer[_nextAddPos],data.Length);
                     _dataLength[_nextAddPos] = data.Length;
                     _timestamp[_nextAddPos++] = timestamp;
                     
-                    if (_nextAddPos > _bufferSize)
+                    if (_nextAddPos > BufferSize)
                     {
-                        _nextAddPos = (_nextAddPos % _bufferSize - 1);
+                        _nextAddPos = (_nextAddPos % BufferSize - 1);
                         _wrapped = true;
                     }
 
@@ -147,9 +157,9 @@ namespace Cinegy.TsDecoder.Buffers
             {
                 lock (_lockObj)
                 {
-                    if (_lastRemPos > _bufferSize)
+                    if (_lastRemPos > BufferSize)
                     {
-                        _lastRemPos = _lastRemPos%_bufferSize - 1;
+                        _lastRemPos = _lastRemPos%BufferSize - 1;
                     }
 
                     if (_lastRemPos != _nextAddPos || _wrapped)
@@ -177,7 +187,7 @@ namespace Cinegy.TsDecoder.Buffers
         /// <returns>Current timestamp, calculated using the Stopwatch timestamp divided by (Stopwatch Timerfrequency / 1000)</returns>
         public ulong CurrentTimestamp()
         {
-            return (ulong)(Stopwatch.GetTimestamp() / TimerFreq);
+            return (ulong)(Stopwatch.GetTimestamp() / StopwatchTicksPerMillisecond);
         }
 
         /// <summary>
@@ -193,13 +203,13 @@ namespace Cinegy.TsDecoder.Buffers
                     var fullness = _nextAddPos - _lastRemPos;
                     if (fullness > -1) return fullness;
 
-                    fullness = fullness + _bufferSize + 1;
+                    fullness = fullness + BufferSize + 1;
                     return fullness;
                 }
             }
         }
 
-        public int BufferSize => _bufferSize;
+        public int BufferSize { get; } = ushort.MaxValue;
 
         /// <summary>
         /// Returns the position of the ring-buffer indicating the array position of the next data will be entered into the buffer
