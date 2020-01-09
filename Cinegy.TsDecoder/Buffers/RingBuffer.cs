@@ -37,19 +37,6 @@ namespace Cinegy.TsDecoder.Buffers
 
         static EventWaitHandle _waitHandle = new AutoResetEvent(false);
 
-        public long StopwatchTicksPerMillisecond
-        {
-            get
-            {
-                if (_ticksPerMs < 1)
-                {
-                    _ticksPerMs = Stopwatch.Frequency / 1000;
-                }
-
-                return _ticksPerMs;
-            }
-        }
-    
         public RingBuffer()
         {
             ResetBuffers();
@@ -85,7 +72,7 @@ namespace Cinegy.TsDecoder.Buffers
         /// <param name="data"></param>
         public void Add(ref byte[] data)
         {
-           Add(ref data, CurrentTimestamp());
+           Add(ref data, (ulong)Stopwatch.GetTimestamp());
         }
 
         /// <summary>
@@ -184,10 +171,10 @@ namespace Cinegy.TsDecoder.Buffers
         /// <summary>
         /// Provides the current timestamp, which would be attached to any new buffer entries added at that moment
         /// </summary>
-        /// <returns>Current timestamp, calculated using the Stopwatch timestamp divided by (Stopwatch Timerfrequency / 1000)</returns>
+        /// <returns>Current timestamp, calculated using the Stopwatch timestamp/returns>
         public ulong CurrentTimestamp()
         {
-            return (ulong)(Stopwatch.GetTimestamp() / StopwatchTicksPerMillisecond);
+            return (ulong)Stopwatch.GetTimestamp();
         }
 
         /// <summary>
