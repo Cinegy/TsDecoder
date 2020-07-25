@@ -167,7 +167,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
 
                             payloadSize -= tsPacket.AdaptationField.FieldSize;
-                            payloadOffs += tsPacket.AdaptationField.FieldSize;
+                            payloadOffs += tsPacket.AdaptationField.FieldSize + 1;
                         }
 
                         if (tsPacket.ContainsPayload && tsPacket.PayloadUnitStartIndicator)
