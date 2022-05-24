@@ -12,20 +12,22 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
     [TestFixture]
     public class TsPacketFactoryTests
     {
-        [Test]
-        public void GetTsPacketsFromDataTest()
+        [TestCase(188)]
+        [TestCase(376)]
+        [TestCase(512)]
+        [TestCase(564)]
+        [TestCase(1024)]
+        [TestCase(1316)]
+        [TestCase(1500)]
+        [TestCase(2048)]
+        public void GetTsPacketsFromDataTest(int AlignmentSize)
         {
             const string filename = @"TestStreams\SD-H264-1mbps-Bars.ts";
             var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, filename);
 
             const int expectedPacketCount = 10493;
-            var sizes = new List<int> { 188, 376, 512, 564, 1024, 1316, 1500, 2048 };
-
-            foreach (var size in sizes)
-            {
-                Console.WriteLine($"Testing file {filename} with block size {size}");
-                PerformUnalignedDataTest(testFile, expectedPacketCount, size);
-            }
+            Console.WriteLine($"Testing file {filename} with block size {AlignmentSize}");
+            PerformUnalignedDataTest(testFile, expectedPacketCount, AlignmentSize);
         }
 
         [TestCase(@"TestStreams\cut-2ts.ts")]
@@ -231,53 +233,56 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
                 var factory = new TsPacketFactory();
 
                 //load some data from test file
-                using (var stream = File.Open(filename, FileMode.Open))
+                using var stream = File.Open(filename, FileMode.Open);
+                var packetCounter = 0;
+
+                var data = new byte[readFragmentSize];
+
+                var readCount = stream.Read(data, 0, readFragmentSize);
+
+                var analyzer = new TsAnalysis.Analyzer();
+                analyzer.DiscontinuityDetected += TsAnalysis_DiscontinuityDetected;
+
+                while (readCount > 0)
                 {
-                    var packetCounter = 0;
-
-                    var data = new byte[readFragmentSize];
-
-                    var readCount = stream.Read(data, 0, readFragmentSize);
-
-                    while (readCount > 0)
+                    try
                     {
-                        try
+                        if (readCount < readFragmentSize)
                         {
-                            if (readCount < readFragmentSize)
-                            {
-                                var tmpArr = new byte[readCount];
-                                Buffer.BlockCopy(data, 0, tmpArr, 0, readCount);
-                                data = new byte[readCount];
-                                Buffer.BlockCopy(tmpArr, 0, data, 0, readCount);
-                            }
-
-                            var tsPackets = factory.GetTsPacketsFromData(data);
-
-                            if (tsPackets == null) break;
-
-                            packetCounter += tsPackets.Length;
-
-                            if (stream.Position < stream.Length)
-                            {
-                                readCount = stream.Read(data, 0, readFragmentSize);
-                            }
-                            else
-                            {
-                                break;
-                            }
-
+                            var tmpArr = new byte[readCount];
+                            Buffer.BlockCopy(data, 0, tmpArr, 0, readCount);
+                            data = new byte[readCount];
+                            Buffer.BlockCopy(tmpArr, 0, data, 0, readCount);
                         }
-                        catch (Exception ex)
+
+                        var tsPackets = factory.GetTsPacketsFromData(data);
+
+                        if (tsPackets == null) break;
+
+                        analyzer.AnalyzePackets(tsPackets);
+
+                        packetCounter += tsPackets.Length;
+                        
+                        if (stream.Position < stream.Length)
                         {
-                            Assert.Fail($@"Unhandled exception reading sample file: {ex.Message}");
+                            readCount = stream.Read(data, 0, readFragmentSize);
                         }
+                        else
+                        {
+                            break;
+                        }
+
                     }
-
-                    if (packetCounter != expectedPacketCount)
+                    catch (Exception ex)
                     {
-                        Assert.Fail($"Failed to read expected number of packets in sample file - expected {expectedPacketCount}, " +
-                                    $"got {packetCounter}, blocksize: {readFragmentSize}");
+                        Assert.Fail($@"Unhandled exception reading sample file: {ex.Message}");
                     }
+                }
+
+                if (packetCounter != expectedPacketCount)
+                {
+                    Assert.Fail($"Failed to read expected number of packets in sample file - expected {expectedPacketCount}, " +
+                                $"got {packetCounter}, blocksize: {readFragmentSize}");
                 }
             }
             catch (Exception ex)
@@ -286,5 +291,9 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             }
         }
 
+        private static void TsAnalysis_DiscontinuityDetected(object sender, TransportStreamEventArgs args)
+        {
+            Console.WriteLine($"CC error in stream for PID: {args.TsPid}");
+        }
     }
 }

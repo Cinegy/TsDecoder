@@ -1,11 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2026
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32421.90
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cinegy.TsDecoder", "Cinegy.TsDecoder\Cinegy.TsDecoder.csproj", "{6D63F8EF-963F-4998-93AD-BF6DBCCF3D97}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cinegy.TsDecoder.Tests", "Cinegy.TsDecoder.Tests\Cinegy.TsDecoder.Tests.csproj", "{C180CE0E-FCBD-4E58-B9A3-C798D00B7D18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cinegy.TsDecoder.Tests", "Cinegy.TsDecoder.Tests\Cinegy.TsDecoder.Tests.csproj", "{C180CE0E-FCBD-4E58-B9A3-C798D00B7D18}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{782C9245-661F-4DA2-98D5-DA836FD6A08F}"
+	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
+		Readme.md = Readme.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -164,10 +164,9 @@ namespace Cinegy.TsDecoder.TransportStream
 
                                 if (_lastPcr == 0) _lastPcr = tsPacket.AdaptationField.Pcr;
                             }
-
-
-                            payloadSize -= tsPacket.AdaptationField.FieldSize;
-                            payloadOffs += tsPacket.AdaptationField.FieldSize;
+                            
+                            payloadSize -= tsPacket.AdaptationField.FieldSize + 1; //field size is exclusive of the field length value
+                            payloadOffs += tsPacket.AdaptationField.FieldSize + 1;
                         }
 
                         if (tsPacket.ContainsPayload && tsPacket.PayloadUnitStartIndicator)
@@ -228,7 +227,7 @@ namespace Cinegy.TsDecoder.TransportStream
                             }
                         }
 
-                        if (payloadSize > 1 && retainPayload)
+                        if (payloadSize >= 1 && retainPayload)
                         {
                             tsPacket.Payload = new byte[payloadSize];
                             Buffer.BlockCopy(data, payloadOffs, tsPacket.Payload, 0, payloadSize);
@@ -245,11 +244,18 @@ namespace Cinegy.TsDecoder.TransportStream
                         break;  // but this is strange!
                 }
 
-                if ((start + TsPacketFixedSize) != dataSize)
+                if (start + TsPacketFixedSize == dataSize) return tsPackets;
+
+                //we have 'residual' data to carry over to next call
+                var residualDataSz = dataSize - start;
+                if (residualDataSz > 0)
                 {
-                    //we have 'residual' data to carry over to next call
-                    _residualData = new byte[dataSize - start];
-                    Buffer.BlockCopy(data,start,_residualData,0, dataSize - start);
+                    _residualData = new byte[residualDataSz];
+                    Buffer.BlockCopy(data, start, _residualData, 0, dataSize - start);
+                }
+                else
+                {
+                    _residualData = null;
                 }
 
                 return tsPackets;
