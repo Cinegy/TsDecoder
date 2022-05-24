@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using Cinegy.TsDecoder.Tables;
 using Cinegy.TsDecoder.TransportStream;
 using NUnit.Framework;
 
@@ -21,7 +22,6 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         {
             var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, file);
             ProcessFileForDescriptors(testFile);
-            
         }
 
         private static void ProcessFileForDescriptors(string sourceFileName)
@@ -37,6 +37,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             var readCount = stream.Read(data, 0, readFragmentSize);
 
             var decoder = new TsDecoder.TransportStream.TsDecoder();
+            decoder.TableChangeDetected += Decoder_TableChangeDetected;
 
             while (readCount > 0)
             {
@@ -54,23 +55,20 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
                     if (decoder.ServiceDescriptionTable != null && decoder.ServiceDescriptionTable.ItemsIncomplete != true)
                     {
-                        
-                        if (decoder.ServiceDescriptionTable.TableId != 0x42) continue;
                         foreach (var program in decoder.ProgramMapTables)
                         {
                             Console.WriteLine(decoder.GetServiceDescriptorForProgramNumber(program.ProgramNumber).ServiceName);
                             foreach (var esStream in program.EsStreams)
                             {
                                 Console.WriteLine($"\t0x{esStream.ElementaryPid:X4} - {DescriptorDictionaries.ShortElementaryStreamTypeDescriptions[esStream.StreamType]}");
-                                
+
                                 //only check type 6 privately defined streams
                                 if (esStream.StreamType != 6) continue;
 
                                 foreach (var desc in esStream.Descriptors)
                                 {
-                                    if (desc is ExtendedEventDescriptor)
+                                    if (desc is ExtendedEventDescriptor extDesc)
                                     {
-                                        var extDesc = desc as ExtendedEventDescriptor;
                                         Console.WriteLine($"{extDesc.TextChar.Value}");
                                     }
                                     else
@@ -100,6 +98,15 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             }
         }
 
+        private static void Decoder_TableChangeDetected(object sender, TableChangedEventArgs args)
+        {
+            var fact = sender as TableFactory;
+
+            if (fact is ServiceDescriptionTableFactory sdtFact)
+            {
+                Console.WriteLine($"{args.Message} - {sdtFact.ServiceDescriptionItems.Count}");
+            }
+        }
     }
 
 }

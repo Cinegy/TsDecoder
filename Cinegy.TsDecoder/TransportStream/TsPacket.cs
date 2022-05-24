@@ -64,7 +64,7 @@ namespace Cinegy.TsDecoder.TransportStream
         CatPid = 0x1,
         TsDescPid = 0x2,
         NitPid = 0x10,
-        SdtPid = 0x11,
+        SdtBatPid = 0x11,
         EitPid = 0x12,
         NullPid = 0x1FFF
     }

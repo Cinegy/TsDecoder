@@ -29,6 +29,8 @@ namespace Cinegy.TsDecoder.TransportStream
         Pmt,
         Sdt,
         Eit,
-        Nit
+        Nit,
+        SdtOther,
+        Bat
     }
 }

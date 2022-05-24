@@ -13,6 +13,7 @@
   limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -22,20 +23,28 @@ namespace Cinegy.TsDecoder.Tables
 {
     public class ServiceDescriptionTableFactory : TableFactory
     {
+        public const int CurrentMuxSdtTableId = 0x42;
+        public const int OtherMuxSdtTableId = 0x46;
+
         /// <summary>
         /// The last decoded ServiceDescription table, with the ServiceDescriptionItems associated with that table section
         /// </summary>
         public ServiceDescriptionTable ServiceDescriptionTable { get; private set; }
         
         /// <summary>
-        /// An agregated list of all current ServiceDescriptionItems, as pulled from all ServiceDescriptionTables with the same ID and version.
+        /// An aggregated list of all current ServiceDescriptionItems, as pulled from all ServiceDescriptionTables with the same ID and version.
         /// </summary>
         public List<ServiceDescriptionItem> ServiceDescriptionItems { get; set; } = new List<ServiceDescriptionItem>();
 
+        /// <summary>
+        /// Flag that we should filter to just the SDT for current mux (if false, will filter for SDT for other mux(es) only)
+        /// </summary>
+        public bool CurrentMux { get; set; } = true; 
+
         private new ServiceDescriptionTable InProgressTable
         {
-            get { return base.InProgressTable as ServiceDescriptionTable; }
-            set { base.InProgressTable = value; }
+            get => base.InProgressTable as ServiceDescriptionTable;
+            set => base.InProgressTable = value;
         }
 
         private HashSet<int> _sectionsCompleted = new HashSet<int>();
@@ -59,8 +68,8 @@ namespace Cinegy.TsDecoder.Tables
                 
                 InProgressTable.TableId = packet.Payload[pos];
 
-                //TODO: Refactor with enum for well-known table IDs, and add option below as filter
-                if (InProgressTable.TableId != 0x42)
+                //Filter this SDT to only read a TableId for either current mux or other mux(es) depending on flag from well-known table IDs
+                if (InProgressTable.TableId != (CurrentMux ? CurrentMuxSdtTableId : OtherMuxSdtTableId))
                 {
                     InProgressTable = null;
                     return;
@@ -153,4 +162,6 @@ namespace Cinegy.TsDecoder.Tables
         }
 
     }
+
+   
 }
