@@ -133,7 +133,7 @@ namespace Cinegy.TsDecoder.TransportStream
             return serviceDesc;
         }
 
-        public T GetDescriptorForProgramNumberByTag<T>( int? programNumber, int streamType, int descriptorTag)  where T : class
+        public T GetDescriptorForProgramNumberByTag<T>( int? programNumber, int streamType, int descriptorTag, bool firstOfMany = false)  where T : class
         {
             if (programNumber == null) return null;
             
@@ -147,7 +147,14 @@ namespace Cinegy.TsDecoder.TransportStream
             {
                 if (esStream.StreamType != streamType) continue;
 
-                selectedDesc = esStream.Descriptors.SingleOrDefault(d => d.DescriptorTag == descriptorTag) as T;
+                if (firstOfMany)
+                {
+                    selectedDesc = esStream.Descriptors.FirstOrDefault(d => d.DescriptorTag == descriptorTag) as T;
+                }
+                else
+                {
+                    selectedDesc = esStream.Descriptors.SingleOrDefault(d => d.DescriptorTag == descriptorTag) as T;
+                }
 
                 if (selectedDesc != null) break;
             }
@@ -168,7 +175,7 @@ namespace Cinegy.TsDecoder.TransportStream
             {
                 if (esStream.StreamType != streamType) continue;
 
-                var desc = esStream.Descriptors.SingleOrDefault(d => d.DescriptorTag == descriptorTag);
+                var desc = esStream.Descriptors.FirstOrDefault(d => d.DescriptorTag == descriptorTag);
 
                 if (desc != null) return esStream;
                
