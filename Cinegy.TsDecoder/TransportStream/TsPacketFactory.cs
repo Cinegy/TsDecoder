@@ -27,18 +27,8 @@ namespace Cinegy.TsDecoder.TransportStream
 
         private byte[] _residualData;
 
-        public readonly int TsPacketFixedSize = 188;
-
-        public TsPacketFactory()
-        {
-
-        }
-
-        public TsPacketFactory(byte TsPacketSize)
-        {
-            TsPacketFixedSize = TsPacketSize;
-        }
-
+        public const int TsPacketFixedSize = 188;
+        
         /// <summary>
         /// Accepts a data array, and loads this data into the factory. When data is pushed, it will raise a TsPacketReady event for each TS packet that is generated.
         /// </summary>
@@ -90,7 +80,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
                 var packetCounter = 0;
 
-                var start = FindSync(data, 0, TsPacketFixedSize);
+                var start = FindSync(data, 0, dataSize);
 
                 while (start >= 0 && ((dataSize - start) >= TsPacketFixedSize))
                 {
@@ -298,26 +288,26 @@ namespace Cinegy.TsDecoder.TransportStream
             return (a << 30) | (b << 15) | c;
         }
 
-        public static int FindSync(IList<byte> tsData, int offset, int TsPacketSize)
+        private static int FindSync(IList<byte> tsData, int offset, int dataLength)
         {
             if (tsData == null) throw new ArgumentNullException(nameof(tsData));
 
             //not big enough to be any kind of single TS packet
-            if (tsData.Count < 188)
+            if (dataLength < TsPacketFixedSize)
             {
                 return -1;
             }
 
             try
             {
-                for (var i = offset; i < tsData.Count; i++)
+                for (var i = offset; i < dataLength; i++)
                 {
                     //check to see if we found a sync byte
                     if (tsData[i] != SyncByte) continue;
-                    if (i + 1 * TsPacketSize < tsData.Count && tsData[i + 1 * TsPacketSize] != SyncByte) continue;
-                    if (i + 2 * TsPacketSize < tsData.Count && tsData[i + 2 * TsPacketSize] != SyncByte) continue;
-                    if (i + 3 * TsPacketSize < tsData.Count && tsData[i + 3 * TsPacketSize] != SyncByte) continue;
-                    if (i + 4 * TsPacketSize < tsData.Count && tsData[i + 4 * TsPacketSize] != SyncByte) continue;
+                    if (i + 1 * TsPacketFixedSize < dataLength && tsData[i + 1 * TsPacketFixedSize] != SyncByte) continue;
+                    if (i + 2 * TsPacketFixedSize < dataLength && tsData[i + 2 * TsPacketFixedSize] != SyncByte) continue;
+                    if (i + 3 * TsPacketFixedSize < dataLength && tsData[i + 3 * TsPacketFixedSize] != SyncByte) continue;
+                    if (i + 4 * TsPacketFixedSize < dataLength && tsData[i + 4 * TsPacketFixedSize] != SyncByte) continue;
                     // seems to be ok
                     return i;
                 }

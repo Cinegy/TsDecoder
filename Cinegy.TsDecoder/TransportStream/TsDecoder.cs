@@ -76,6 +76,8 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public void AddPackets(IEnumerable<TsPacket> newPackets)
         {
+            if (newPackets == null) return;
+
             foreach (var newPacket in newPackets)
             {
                 AddPacket(newPacket);
