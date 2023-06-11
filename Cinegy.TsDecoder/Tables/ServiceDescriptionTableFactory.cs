@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -13,10 +13,10 @@
   limitations under the License.
 */
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Cinegy.TsDecoder.Descriptors;
 using Cinegy.TsDecoder.TransportStream;
 
 namespace Cinegy.TsDecoder.Tables
@@ -57,7 +57,7 @@ namespace Cinegy.TsDecoder.Tables
             {
                 InProgressTable = new ServiceDescriptionTable { Pid = packet.Pid, PointerField = packet.Payload[0] };
 
-                if (InProgressTable.PointerField > packet.Payload.Length)
+                if (InProgressTable.PointerField > packet.PayloadLen)
                 {
                     Debug.Assert(true, "Service Description Table has packet pointer outside the packet.");
                 }
@@ -83,7 +83,7 @@ namespace Cinegy.TsDecoder.Tables
                 }
 
                 InProgressTable.SectionLength =
-                    (short)(((packet.Payload[pos + 1] & 0x3) << 8) + packet.Payload[pos + 2]);
+                    (ushort)(((packet.Payload[pos + 1] & 0x3) << 8) + packet.Payload[pos + 2]);
                 
                 InProgressTable.TransportStreamId = (ushort)((packet.Payload[pos + 3] << 8) + packet.Payload[pos + 4]);
                 InProgressTable.CurrentNextIndicator = (packet.Payload[pos + 5] & 0x1) != 0;

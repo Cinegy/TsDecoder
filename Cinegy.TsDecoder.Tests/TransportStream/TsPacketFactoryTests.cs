@@ -1,9 +1,25 @@
-﻿using System;
+﻿/* Copyright 2016-2023 Cinegy GmbH.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Cinegy.TsDecoder.Descriptors;
 using Cinegy.TsDecoder.TransportStream;
 using NUnit.Framework;
 
@@ -22,7 +38,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         [TestCase(2048)]
         public void GetTsPacketsFromDataTest(int AlignmentSize)
         {
-            const string filename = @"TestStreams\SD-H264-1mbps-Bars.ts";
+            const string filename = @"TestStreams/SD-H264-1mbps-Bars.ts";
             var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, filename);
 
             const int expectedPacketCount = 10493;
@@ -30,8 +46,8 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
             PerformUnalignedDataTest(testFile, expectedPacketCount, AlignmentSize);
         }
 
-        [TestCase(@"TestStreams\cut-2ts.ts")]
-        [TestCase(@"TestStreams\cut-bbchd-dvbs2mux.ts")]
+        [TestCase(@"TestStreams/cut-2ts.ts")]
+        [TestCase(@"TestStreams/cut-bbchd-dvbs2mux.ts")]
         public void ReadServiceNamesFromDataTest(string filename)
         {
             var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, filename);
@@ -42,7 +58,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
         public void ReadEsFromStream()
         {
             //ProcessFileForStreams(@"D:\Data\OneDrive\Temp\DVBT2-HEVC-EAC3-SHORT.ts");
-            var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, @"TestStreams\D2-TS-HD-AC3-Blue-45mbps.ts");
+            var testFile = Path.Combine(TestContext.CurrentContext.TestDirectory, @"TestStreams/D2-TS-HD-AC3-Blue-45mbps.ts");
             ProcessFileForStreams(testFile);
         }
 
@@ -241,8 +257,8 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
                 var readCount = stream.Read(data, 0, readFragmentSize);
 
-                var analyzer = new TsAnalysis.Analyzer();
-                analyzer.DiscontinuityDetected += TsAnalysis_DiscontinuityDetected;
+                //var analyzer = new TsAnalysis.Analyzer();
+                //analyzer.DiscontinuityDetected += TsAnalysis_DiscontinuityDetected;
 
                 while (readCount > 0)
                 {
@@ -260,7 +276,7 @@ namespace Cinegy.TsDecoder.Tests.TransportStream
 
                         if (tsPackets == null) break;
 
-                        analyzer.AnalyzePackets(tsPackets);
+                        //analyzer.AnalyzePackets(tsPackets);
 
                         packetCounter += tsPackets.Length;
                         

@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 */
 
 using System.Collections.Generic;
-using Cinegy.TsDecoder.TransportStream;
+using Cinegy.TsDecoder.Descriptors;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
@@ -22,7 +22,7 @@ namespace Cinegy.TsDecoder.Tables
 {
     public class EventInformationTable : Table
     {
-        public ushort SericeId { get; set; }      
+        public ushort ServiceId { get; set; }      
         public byte VersionNumber { get; set; }
         public bool CurrentNextIndicator { get; set; }
         public byte SectionNumber { get; set; }

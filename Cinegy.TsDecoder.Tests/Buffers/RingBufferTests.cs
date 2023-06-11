@@ -1,4 +1,19 @@
-﻿using System;
+﻿/* Copyright 2016-2023 Cinegy GmbH.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -44,14 +59,14 @@ namespace Cinegy.TsDecoder.Tests.Buffers
 
                 FillBufferWithFakeData(buffer, dataSize, dataCount);
                 var checkValueBuffer = new byte[1];
-                buffer.Peek(dataCount-bufferSize-2, ref checkValueBuffer, out int dataPeekLength);
+                buffer.Peek(dataCount-bufferSize-2, checkValueBuffer, out int dataPeekLength);
 
                 if (checkValueBuffer[0] != dataCount -1)
                     Assert.Fail($"Unexpected value at circled buffer location - expected {dataCount -1}, found {checkValueBuffer[0]}");
 
                 for(int i = 4; i<dataCount; i++)
                 {
-                    buffer.Remove(ref checkValueBuffer, out int dataLength, out ulong timestamp);
+                    buffer.Remove(checkValueBuffer, out int dataLength, out ulong timestamp);
                     if(checkValueBuffer[0] != i)
                         Assert.Fail($"Unexpected value at circled buffer location - expected {dataCount - 1}, found {checkValueBuffer[0]}");
                 }
@@ -91,7 +106,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             for (int i = 0; i < 255; i++)
             {
                 data[0] = (byte)i;
-                buffer.Remove(ref data, out int dataLength, out ulong timestamp);
+                buffer.Remove(data, out int dataLength, out ulong timestamp);
 
                 if(data[0]!=i)
                     Assert.Fail($"Failed ThreadedLoopedBufferTest with buffer size {bufferSize} - expected value {i}, got {data[0]}.");
@@ -147,7 +162,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                 data[0] = 0;
                 try
                 {
-                    buffer.Peek(readPosition, ref data, out int dataLength);
+                    buffer.Peek(readPosition, data, out int dataLength);
                 }
                 catch(Exception ex)
                 {
@@ -178,7 +193,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
             for (int i = 0; i < cycleCount; i++)
             {
                 data[0] = (byte)i;
-                buffer.Add(ref data);
+                buffer.Add(data);
              
                 Thread.Sleep(5);
             }
@@ -202,17 +217,17 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                 for (var i = 1; i < 40; i++)
                 {
                     data[0] = (byte)i;
-                    buffer.Add(ref data);
-                    buffer.Add(ref data);
-                    buffer.Add(ref data);
-                    buffer.Add(ref data);
-                    buffer.Remove(ref data,out outDataSize, out outTimestamp);
+                    buffer.Add(data);
+                    buffer.Add(data);
+                    buffer.Add(data);
+                    buffer.Add(data);
+                    buffer.Remove(data,out outDataSize, out outTimestamp);
                     if(data[0]!=i) Assert.Fail("Returned value does not match expected value");
-                    buffer.Remove(ref data, out outDataSize, out outTimestamp);
+                    buffer.Remove(data, out outDataSize, out outTimestamp);
                     if (data[0] != i) Assert.Fail("Returned value does not match expected value");
-                    buffer.Remove(ref data, out outDataSize, out outTimestamp);
+                    buffer.Remove(data, out outDataSize, out outTimestamp);
                     if (data[0] != i) Assert.Fail("Returned value does not match expected value");
-                    buffer.Remove(ref data, out outDataSize, out outTimestamp);
+                    buffer.Remove(data, out outDataSize, out outTimestamp);
                     if (data[0] != i) Assert.Fail("Returned value does not match expected value");
                 }
 
@@ -260,7 +275,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
 
                     for (var j = 0; j < size; j++)
                     {
-                        buffer.Remove(ref data, out dataLen, out tstamp);
+                        buffer.Remove(data, out dataLen, out tstamp);
                         if (data[0] != j % 256)
                         {
                             Assert.Fail($"Unexpected value after pushing first data through RingBuffer (expected {j % 256}, got {data[0]})");
@@ -272,7 +287,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
 
                     for (var j = 0; j < addCount; j++)
                     {
-                        buffer.Remove(ref data, out dataLen, out tstamp);
+                        buffer.Remove(data, out dataLen, out tstamp);
                         if (data[0] != j) Assert.Fail($"Unexpected value after pushing second data through RingBuffer (expected {j}, got {data[0]}");
                     }
 
@@ -316,7 +331,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                     {
                         int dataLen;
                         ulong tstamp;
-                        buffer.Remove(ref data, out dataLen, out tstamp);
+                        buffer.Remove(data, out dataLen, out tstamp);
                         CheckBufferFullness(buffer, size -j);
                     }
 
@@ -352,7 +367,7 @@ namespace Cinegy.TsDecoder.Tests.Buffers
                     fakeTsData[n] = (byte)i;
                 }
 
-                buffer.Add(ref fakeTsData);
+                buffer.Add(fakeTsData);
             }
 
         }

@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,16 +14,16 @@
 */
 
 using System.Collections.Generic;
-using Cinegy.TsDecoder.TransportStream;
+using Cinegy.TsDecoder.Descriptors;
 
 namespace Cinegy.TsDecoder.Tables
 {
     public interface ITable
     {
         List<Descriptor> Descriptors { get; set; }
-        short Pid { get; set; }
+        ushort Pid { get; set; }
         byte PointerField { get; set; }
-        short SectionLength { get; set; }
+        ushort SectionLength { get; set; }
         byte TableId { get; set; }
     }
 }

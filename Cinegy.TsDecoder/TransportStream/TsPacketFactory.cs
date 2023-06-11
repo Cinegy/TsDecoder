@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,20 +14,48 @@
 */
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 namespace Cinegy.TsDecoder.TransportStream
 {
     public class TsPacketFactory
     {
+        private readonly Meter _tsPktMeter = new("Cinegy.TsDecoder");
+        private readonly ObservableCounter<long> _tsDataProcessedCounter;
+        private readonly ObservableCounter<long> _tsCorruptedPacketsCounter;
+        private readonly ArrayPool<byte> sharedBytePool  = ArrayPool<byte>.Shared;
+
         private const byte SyncByte = 0x47;
-        
+
         private ulong _lastPcr;
+        private ulong _lastOpcr;
 
         private byte[] _residualData;
+        private int _residualDataSz;
 
         public const int TsPacketFixedSize = 188;
+        public const int MaxAdaptationFieldSize = 183;
+        
+        public long TotalDataProcessed { get; private set; }
+
+        public long TotalCorruptedTsPackets { get; private set; }
+
+        public event TsPacketReadyEventHandler TsPacketReady;
+
+        public delegate void TsPacketReadyEventHandler(object sender, TsPacketReadyEventArgs args);
+
+        public TsPacketFactory()
+        {
+            _tsDataProcessedCounter = _tsPktMeter.CreateObservableCounter("dataProcessed", () => TotalDataProcessed, "Bytes",
+                "Total volume of data pushed into TS Packet Factory");
+
+            _tsCorruptedPacketsCounter = _tsPktMeter.CreateObservableCounter("corruptedPackets", () => TotalCorruptedTsPackets,
+                "TS Packets",
+                "Total number of discarded TS packets determined during framing as being damaged, or marked with TEI fields");
+        }
         
         /// <summary>
         /// Accepts a data array, and loads this data into the factory. When data is pushed, it will raise a TsPacketReady event for each TS packet that is generated.
@@ -41,13 +69,52 @@ namespace Cinegy.TsDecoder.TransportStream
                 dataSize = data.Length;
             }
 
-            var packets = GetTsPacketsFromData(data, dataSize,retainPayload,preserveSourceData);
+            TotalDataProcessed += dataSize;
+
+            var packets = GetTsPacketsFromData(data, dataSize, retainPayload, preserveSourceData);
 
             foreach (var tsPacket in packets)
             {
                 OnTsPacketReadyDetected(tsPacket);
             }
+        }
 
+        public static byte[] GetDataFromTsPacket(TsPacket tsPacket)
+        {
+            var data = new byte[TsPacketFixedSize];
+            data[0] = SyncByte;
+            //set PID into bytes
+            data[1] = (byte)(tsPacket.Pid >> 8);
+            data[2] = (byte)(tsPacket.Pid & 0xFF);
+            //apply flags (packed into top of PID bytes
+            if (tsPacket.TransportErrorIndicator) data[1] += 0b10000000;
+            if (tsPacket.PayloadUnitStartIndicator) data[1] += 0b01000000;
+            if (tsPacket.TransportPriority) data[1] += 0b00100000;
+            //pack scrambling and adaptation field control into byte with CC
+            data[3] = (byte)(tsPacket.ScramblingControl << 6);
+            if (tsPacket.AdaptationFieldExists) { data[3] += 0b00100000; }
+            if (tsPacket.ContainsPayload) { data[3] += 0b00010000; }
+            data[3] += (byte)(tsPacket.ContinuityCounter & 0b00001111);
+
+            var idx = 4;
+            if (tsPacket.AdaptationFieldExists)
+            {
+                var afData = GetDataFromAdaptationField(tsPacket.AdaptationField);
+                Buffer.BlockCopy(afData, 0, data, idx, afData.Length);
+                idx += afData.Length;
+            }
+
+            if (tsPacket.ContainsPayload)
+            {
+                Buffer.BlockCopy(tsPacket.Payload, 0, data, idx, tsPacket.PayloadLen);
+            }
+
+            return data;
+        }
+
+        public TsPacket[] GetRentedTsPacketsFromData(byte[] data, out int packetCount, int dataSize = 0, bool retainPayload = true, bool preserveSourceData = false)
+        {
+            return GetTsPacketsFromData(data, dataSize, retainPayload, preserveSourceData, true, out packetCount);
         }
 
         /// <summary>
@@ -61,139 +128,187 @@ namespace Cinegy.TsDecoder.TransportStream
         /// <returns>Complete TS packets from this data and any prior partial data rolled over.</returns>
         public TsPacket[] GetTsPacketsFromData(byte[] data, int dataSize = 0, bool retainPayload = true, bool preserveSourceData = false)
         {
+            return GetTsPacketsFromData(data, dataSize, retainPayload, preserveSourceData, false, out _);
+        }
+
+        public void ReturnTsPackets(TsPacket[] rentedPackets, int pktCount)
+        {
+            for(var i = 0;i< pktCount;i++)
+            {
+                if(rentedPackets[i].SourceData != null) ArrayPool<byte>.Shared.Return(rentedPackets[i].SourceData);
+                if (rentedPackets[i].Payload == null)
+                {
+                   // Console.WriteLine("Null payload!");
+                }
+                else
+                {
+                    sharedBytePool.Return(rentedPackets[i].Payload);
+                    //rentedPackets[i].Payload = null;
+                }
+               // if(rentedPacket.Payload != null) ArrayPool<byte>.Shared.Return(rentedPacket.Payload);
+            }
+            ArrayPool<TsPacket>.Shared.Return(rentedPackets);
+        }
+        
+        protected virtual void OnTsPacketReadyDetected(TsPacket tsPacket)
+        {
+            var handler = TsPacketReady;
+            if (handler == null) return;
+            var args = new TsPacketReadyEventArgs { TsPacket = tsPacket };
+            handler(this, args);
+        }
+
+        private TsPacket[] GetTsPacketsFromData(byte[] data, int dataSize, bool retainPayload, bool preserveSourceData, bool rentPackets, out int packetCounter)
+        {
             try
             {
-                if(dataSize == 0) { dataSize = data.Length; }
+                var rentedDataArray = false;
 
+                if (dataSize == 0) { dataSize = data.Length; }
+                
+                TotalDataProcessed += dataSize;
+                
                 if (_residualData != null)
                 {
-                    var tempArray = new byte[dataSize];
-                    Buffer.BlockCopy(data,0,tempArray,0, dataSize);
-                    data = new byte[_residualData.Length + tempArray.Length];
-                    Buffer.BlockCopy(_residualData,0,data,0,_residualData.Length);
-                    Buffer.BlockCopy(tempArray,0,data,_residualData.Length,tempArray.Length);
-                    dataSize = data.Length;
+                    rentedDataArray = true;
+                    var resizedData = sharedBytePool.Rent(dataSize + _residualDataSz);
+                    Buffer.BlockCopy(_residualData, 0, resizedData, 0, _residualDataSz);
+                    Buffer.BlockCopy(data, 0, resizedData, _residualDataSz, dataSize);
+                    dataSize += _residualDataSz;
+                    data = resizedData;
                 }
 
-                var maxPackets = (dataSize) / TsPacketFixedSize;
-                var tsPackets = new TsPacket[maxPackets];
+                var maxPackets = dataSize / TsPacketFixedSize;
 
-                var packetCounter = 0;
+                var tsPackets = rentPackets ? ArrayPool<TsPacket>.Shared.Rent(maxPackets) : new TsPacket[maxPackets];
 
-                var start = FindSync(data, 0, dataSize);
+                packetCounter = 0;
 
-                while (start >= 0 && ((dataSize - start) >= TsPacketFixedSize))
+                var start = FindSync(data, 0, ref dataSize);
+                
+                while (start >= 0 && dataSize - start >= TsPacketFixedSize)
                 {
                     var tsPacket = new TsPacket
                     {
                         SyncByte = data[start],
-                        Pid = (short)(((data[start + 1] & 0x1F) << 8) + (data[start + 2])),
+                        Pid = (ushort)(((data[start + 1] & 0x1F) << 8) + data[start + 2]),
                         TransportErrorIndicator = (data[start + 1] & 0x80) != 0,
                         PayloadUnitStartIndicator = (data[start + 1] & 0x40) != 0,
                         TransportPriority = (data[start + 1] & 0x20) != 0,
-                        ScramblingControl = (short)(data[start + 3] >> 6),
+                        ScramblingControl = (byte)(data[start + 3] >> 6),
                         AdaptationFieldExists = (data[start + 3] & 0x20) != 0,
                         ContainsPayload = (data[start + 3] & 0x10) != 0,
-                        ContinuityCounter = (short)(data[start + 3] & 0xF),
+                        ContinuityCounter = (byte)(data[start + 3] & 0xF),
                         SourceBufferIndex = start
                     };
 
-                    if(preserveSourceData)
+                    if (preserveSourceData)
                     {
-                        tsPacket.SourceData = new byte[TsPacketFixedSize];
+                        tsPacket.SourceDataLen = TsPacketFixedSize;
+                        tsPacket.SourceData = rentPackets ? sharedBytePool.Rent(TsPacketFixedSize) : new byte[TsPacketFixedSize];
                         Buffer.BlockCopy(data, start, tsPacket.SourceData, 0, TsPacketFixedSize);
                     }
 
+                    //collect any adaptation field parameters into a struct for quick / easy access
                     //skip packets with error indicators or on the null PID
-                    if (!tsPacket.TransportErrorIndicator && (tsPacket.Pid != (short)PidType.NullPid))
+                    if (tsPacket.TransportErrorIndicator) TotalCorruptedTsPackets++;
+
+                    if (!tsPacket.TransportErrorIndicator && tsPacket.Pid != (short)PidType.NullPid)
                     {
                         var payloadOffs = start + 4;
-                        var payloadSize = TsPacketFixedSize - 4;
+                        var payloadSize = TsPacketFixedSize - 4;//max possible payload size
 
                         if (tsPacket.AdaptationFieldExists)
                         {
                             tsPacket.AdaptationField = new AdaptationField()
                             {
-                                FieldSize = data[start + 4],
-                                DiscontinuityIndicator = (data[start + 5] & 0x80) != 0,
-                                RandomAccessIndicator = (data[start + 5] & 0x40) != 0,
-                                ElementaryStreamPriorityIndicator = (data[start + 5] & 0x20) != 0,
-                                PcrFlag = (data[start + 5] & 0x10) != 0,
-                                OpcrFlag = (data[start + 5] & 0x8) != 0,
-                                SplicingPointFlag = (data[start + 5] & 0x4) != 0,
-                                TransportPrivateDataFlag = (data[start + 5] & 0x2) != 0,
-                                AdaptationFieldExtensionFlag = (data[start + 5] & 0x1) != 0
+                                FieldSize = data[payloadOffs++],
+                                DiscontinuityIndicator = (data[payloadOffs] & 0x80) != 0,
+                                RandomAccessIndicator = (data[payloadOffs] & 0x40) != 0,
+                                ElementaryStreamPriorityIndicator = (data[payloadOffs] & 0x20) != 0,
+                                PcrFlag = (data[payloadOffs] & 0x10) != 0,
+                                OpcrFlag = (data[payloadOffs] & 0x8) != 0,
+                                SplicingPointFlag = (data[payloadOffs] & 0x4) != 0,
+                                TransportPrivateDataFlag = (data[payloadOffs] & 0x2) != 0,
+                                AdaptationFieldExtensionFlag = (data[payloadOffs++] & 0x1) != 0
                             };
 
                             if (tsPacket.AdaptationField.FieldSize >= payloadSize)
                             {
-#if DEBUG
-                                Debug.WriteLine("TS packet data adaptationFieldSize >= payloadSize");
-#endif
-                                return null;
+                                //this has gone very wrong, and we should not trust any of the data sample we have...
+                                return Flush(data, dataSize, rentedDataArray);
                             }
                             
-                            if (tsPacket.AdaptationField.PcrFlag && tsPacket.AdaptationField.FieldSize > 0)
+                            if (tsPacket.AdaptationField is { PcrFlag: true, FieldSize: > 0 })
                             {
                                 //Packet has PCR
-                                tsPacket.AdaptationField.Pcr = (((uint)(data[start + 6]) << 24) +
-                                                                ((uint)(data[start + 7] << 16)) +
-                                                                ((uint)(data[start + 8] << 8)) + (data[start + 9]));
+                                tsPacket.AdaptationField.Pcr = ((uint)data[payloadOffs++] << 24) +
+                                                               (uint)(data[payloadOffs++] << 16) +
+                                                               (uint)(data[payloadOffs++] << 8) + data[payloadOffs++];
 
                                 tsPacket.AdaptationField.Pcr <<= 1;
 
-                                if ((data[start + 10] & 0x80) == 1)
-                                {
-                                    tsPacket.AdaptationField.Pcr |= 1;
-                                }
+                                //TODO: this is hinky, and needs careful researching = bit it touches slightly the lowest bit (so does almost nothing) - not sure why...
+                                //if ((data[start + 4] & 0x80) == 1)
+                                //{
+                                //    tsPacket.AdaptationField.Pcr |= 1;
+                                //}
 
                                 tsPacket.AdaptationField.Pcr *= 300;
-                                var iLow = (uint)((data[start + 10] & 1) << 8) + data[start + 11];
+                                var iLow = (uint)((data[payloadOffs++] & 1) << 8) + data[payloadOffs++];
                                 tsPacket.AdaptationField.Pcr += iLow;
-
-
+                                
                                 if (_lastPcr == 0) _lastPcr = tsPacket.AdaptationField.Pcr;
                             }
-                            
-                            payloadSize -= tsPacket.AdaptationField.FieldSize + 1; //field size is exclusive of the field length value
-                            payloadOffs += tsPacket.AdaptationField.FieldSize + 1;
-                        }
 
-                        if (tsPacket.ContainsPayload && tsPacket.PayloadUnitStartIndicator)
-                        {
-                            if (payloadOffs > (dataSize - 2) || data[payloadOffs] != 0 || data[payloadOffs + 1] != 0 || data[payloadOffs + 2] != 1)
+                            if (tsPacket.AdaptationField is { OpcrFlag: true, FieldSize: > 0 })
                             {
-#if DEBUG
-                                //    Debug.WriteLine("PES syntax error: no PES startcode found, or payload offset exceeds boundary of data");
-#endif
+                                //Packet has OPCR
+                                tsPacket.AdaptationField.Opcr = ((uint)data[payloadOffs++] << 24) +
+                                                                (uint)(data[payloadOffs++] << 16) +
+                                                                (uint)(data[payloadOffs++] << 8) + data[payloadOffs++];
+
+                                tsPacket.AdaptationField.Opcr <<= 1;
+                                
+                                //TODO: see above - hinky
+                                //if ((data[start + 4] & 0x80) == 1)
+                                //{
+                                //    tsPacket.AdaptationField.Opcr |= 1;
+                                //}
+
+                                tsPacket.AdaptationField.Opcr *= 300;
+                                var iLow = (uint)((data[payloadOffs++] & 1) << 8) + data[payloadOffs++];
+                                tsPacket.AdaptationField.Opcr += iLow;
+
+                                if (_lastOpcr == 0) _lastOpcr = tsPacket.AdaptationField.Opcr;
                             }
-                            else
+
+                            payloadSize = TsPacketFixedSize - 5 - tsPacket.AdaptationField.FieldSize;
+                            payloadOffs = start + 5 + tsPacket.AdaptationField.FieldSize;
+                        }
+                        
+
+                        //if a packet has a payload start, check for a PES start-code and then map some key fields into a PesHdr struct for quick / easy access
+                        if (tsPacket is { ContainsPayload: true, PayloadUnitStartIndicator: true })
+                        {
+                            if (payloadOffs < dataSize - 1 && data[payloadOffs] == 0 && data[payloadOffs + 1] == 0 && data[payloadOffs + 2] == 1)
                             {
                                 tsPacket.PesHeader = new PesHdr
                                 {
-                                    StartCode = (uint)((data[payloadOffs] << 16) + (data[payloadOffs + 1] << 8) + data[payloadOffs + 2]),
+                                    StartCode = (uint)((data[payloadOffs] << 16) + (data[payloadOffs + 1] << 8) +
+                                                       data[payloadOffs + 2]),
                                     StreamId = data[payloadOffs + 3],
                                     PacketLength = (ushort)((data[payloadOffs + 4] << 8) + data[payloadOffs + 5]),
                                     Pts = -1,
                                     Dts = -1
                                 };
 
-                                tsPacket.PesHeader.HeaderLength = (byte)tsPacket.PesHeader.PacketLength;
-
-                                var stmrId = tsPacket.PesHeader.StreamId; //just copying to small name to make code less huge and slightly faster...
-
-                                if ((stmrId != (uint)PesStreamTypes.ProgramStreamMap) &&
-                                    (stmrId != (uint)PesStreamTypes.PaddingStream) &&
-                                    (stmrId != (uint)PesStreamTypes.PrivateStream2) &&
-                                    (stmrId != (uint)PesStreamTypes.ECMStream) &&
-                                    (stmrId != (uint)PesStreamTypes.EMMStream) &&
-                                    (stmrId != (uint)PesStreamTypes.ProgramStreamDirectory) &&
-                                    (stmrId != (uint)PesStreamTypes.DSMCCStream) &&
-                                    (stmrId != (uint)PesStreamTypes.H2221TypeEStream))
+                                //check to see if this is the kind of PES that has the more advanced flags and fields (like PTS / DTS)
+                                if (!Pes.SimplePesTypes.Contains((PesStreamTypes)tsPacket.PesHeader.StreamId))
                                 {
                                     var ptsDtsFlag = data[payloadOffs + 7] >> 6;
 
-                                    tsPacket.PesHeader.HeaderLength = (byte)(9 + data[payloadOffs + 8]);
+                                    tsPacket.PesHeader.HeaderLength = (byte)(3 + data[payloadOffs + 8]);
 
                                     switch (ptsDtsFlag)
                                     {
@@ -205,21 +320,23 @@ namespace Cinegy.TsDecoder.TransportStream
                                             tsPacket.PesHeader.Dts = Get_TimeStamp(1, data, payloadOffs + 14);
                                             break;
                                         case 1:
-                                            throw new Exception("PES Syntax error: pts_dts_flag = 1");
+                                            //forbidden value - this has gone very wrong, and we should not trust any of the data sample we have...
+                                            return Flush(data, dataSize, rentedDataArray);
                                     }
                                 }
-
-                                tsPacket.PesHeader.Payload = new byte[tsPacket.PesHeader.HeaderLength];
-                                Buffer.BlockCopy(data, payloadOffs, tsPacket.PesHeader.Payload, 0, tsPacket.PesHeader.HeaderLength);
-
-                                payloadOffs += tsPacket.PesHeader.HeaderLength;
-                                payloadSize -= tsPacket.PesHeader.HeaderLength;
                             }
                         }
 
+                        //copy the TS payload (exclusive of any adaptation field, but inclusive of any PES header) into the payload array of the TS packet
                         if (payloadSize >= 1 && retainPayload)
                         {
-                            tsPacket.Payload = new byte[payloadSize];
+                            tsPacket.PayloadLen = payloadSize;
+                            if (payloadSize > 184)
+                            {
+                                //this has gone very wrong, and we should not trust any of the data sample we have...
+                                return Flush(data, dataSize, rentedDataArray);
+                            }
+                            tsPacket.Payload = rentPackets ? sharedBytePool.Rent(TsPacketFixedSize) : new byte[payloadSize];
                             Buffer.BlockCopy(data, payloadOffs, tsPacket.Payload, 0, payloadSize);
                         }
                     }
@@ -230,22 +347,41 @@ namespace Cinegy.TsDecoder.TransportStream
 
                     if (start >= dataSize)
                         break;
-                    if (data[start] != SyncByte)
-                        break;  // but this is strange!
+                    if (data[start] == SyncByte) continue;
+                    
+                    //this has gone very wrong, and we should not trust any of the data sample we have...
+                    return Flush(data, dataSize, rentedDataArray);
                 }
 
-                if (start + TsPacketFixedSize == dataSize) return tsPackets;
+                if (start + TsPacketFixedSize == dataSize)
+                {
+                    if (rentedDataArray)
+                    {
+                        sharedBytePool.Return(data);
+                    }
+                    return tsPackets;
+                }
 
                 //we have 'residual' data to carry over to next call
-                var residualDataSz = dataSize - start;
-                if (residualDataSz > 0)
+                _residualDataSz = dataSize - start;
+                if (_residualDataSz > 0)
                 {
-                    _residualData = new byte[residualDataSz];
-                    Buffer.BlockCopy(data, start, _residualData, 0, dataSize - start);
+                    if(_residualData != null) sharedBytePool.Return(_residualData);
+                    _residualData =sharedBytePool.Rent(_residualDataSz);
+                    Buffer.BlockCopy(data, start, _residualData, 0, _residualDataSz);
                 }
                 else
                 {
-                    _residualData = null;
+                    if (_residualData != null)
+                    {
+                        sharedBytePool.Return(_residualData);
+                        _residualData = null;
+                    }
+                }
+
+                if (rentedDataArray)
+                {
+                    sharedBytePool.Return(data);
                 }
 
                 return tsPackets;
@@ -256,7 +392,43 @@ namespace Cinegy.TsDecoder.TransportStream
                 Debug.WriteLine("Exception within GetTsPacketsFromData method: " + ex.Message);
             }
 
+            packetCounter = 0;
             return null;
+        }
+
+        private static byte[] GetDataFromAdaptationField(AdaptationField af)
+        {
+            var data = new byte[af.FieldSize + 1];
+
+            data[0] = af.FieldSize;
+            if (af.DiscontinuityIndicator) data[1] += 0b10000000;
+            if (af.RandomAccessIndicator) data[1] += 0b01000000;
+            if (af.ElementaryStreamPriorityIndicator) data[1] += 0b00100000;
+            if (af.PcrFlag) data[1] += 0b00010000;
+            if (af.OpcrFlag) data[1] += 0b00001000;
+            //TODO: skip unsupported flags - should make this except or implement it...
+            //if (af.SplicingPointFlag) data[5] += 0b00000100;
+            //if (af.TransportPrivateDataFlag) data[5] += 0b00000010;
+            //if (af.AdaptationFieldExtensionFlag) data[5] += 0b00000001;
+            var idx = 2;
+            if (af.PcrFlag)
+            {
+                //TODO: Read PCR data, format into correct bytes, push into data
+                idx += 6;
+            }
+            if (af.OpcrFlag)
+            {
+                //TODO: Read OPCR data, format into correct bytes, push into data
+                idx += 6;
+            }
+            //TODO: if SPF, TPDF or ADEF are set, advance index and add this data - when implemented
+
+            while (idx < data.Length)
+            {
+                data[idx++] = 0xFF;
+            }
+
+            return data;
         }
 
         private static long Get_TimeStamp(int code, IList<byte> data, int offs)
@@ -269,7 +441,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 throw new Exception("PES Syntax error: 0 value timestamp code check passed in");
             }
 
-            if ((data[offs + 0] >> 4) != code)
+            if (data[offs + 0] >> 4 != code)
                 throw new Exception("PES Syntax error: Wrong timestamp code");
 
             if ((data[offs + 0] & 1) != 1)
@@ -288,7 +460,7 @@ namespace Cinegy.TsDecoder.TransportStream
             return (a << 30) | (b << 15) | c;
         }
 
-        private static int FindSync(IList<byte> tsData, int offset, int dataLength)
+        private static int FindSync(IList<byte> tsData, int offset,ref int dataLength)
         {
             if (tsData == null) throw new ArgumentNullException(nameof(tsData));
 
@@ -300,15 +472,35 @@ namespace Cinegy.TsDecoder.TransportStream
 
             try
             {
+                var endOfSyncPos = 0;
                 for (var i = offset; i < dataLength; i++)
                 {
                     //check to see if we found a sync byte
                     if (tsData[i] != SyncByte) continue;
-                    if (i + 1 * TsPacketFixedSize < dataLength && tsData[i + 1 * TsPacketFixedSize] != SyncByte) continue;
-                    if (i + 2 * TsPacketFixedSize < dataLength && tsData[i + 2 * TsPacketFixedSize] != SyncByte) continue;
-                    if (i + 3 * TsPacketFixedSize < dataLength && tsData[i + 3 * TsPacketFixedSize] != SyncByte) continue;
-                    if (i + 4 * TsPacketFixedSize < dataLength && tsData[i + 4 * TsPacketFixedSize] != SyncByte) continue;
-                    // seems to be ok
+                    while (endOfSyncPos < dataLength)
+                    {
+                        endOfSyncPos += TsPacketFixedSize;
+                        if (endOfSyncPos < dataLength && tsData[endOfSyncPos] != SyncByte) break;
+                    }
+
+                    if (endOfSyncPos < dataLength)
+                    {
+                        var zeroSyncCheckPos = endOfSyncPos;
+                        //we did not sync to end, try to evaluate for special case of zero-padded data
+                        while (zeroSyncCheckPos < dataLength)
+                        {
+                            zeroSyncCheckPos += TsPacketFixedSize;
+                            if (zeroSyncCheckPos < dataLength && tsData[zeroSyncCheckPos] != 0) break;
+                        }
+                        dataLength = endOfSyncPos;
+                    }
+
+                    if (endOfSyncPos < dataLength)
+                    {
+                        //corrupted tail of data, loss of sync - for now, we'll throw the whole block
+                        return -1;
+                    }
+
                     return i;
                 }
                 return -1;
@@ -320,16 +512,18 @@ namespace Cinegy.TsDecoder.TransportStream
             }
         }
 
-        // a complete TS packet is ready for callbacks...
-        public event TsPacketReadyEventHandler TsPacketReady;
-        public delegate void TsPacketReadyEventHandler(object sender, TsPacketReadyEventArgs args);
-
-        protected virtual void OnTsPacketReadyDetected(TsPacket tsPacket)
+        private  TsPacket[] Flush(byte[] data, int dataSize, bool rentedDataArray)
         {
-            var handler = TsPacketReady;
-            if (handler == null) return;
-            var args = new TsPacketReadyEventArgs { TsPacket = tsPacket };
-            handler(this, args);
+            var maxPackets = dataSize / TsPacketFixedSize;
+            TotalCorruptedTsPackets += maxPackets;
+            if (rentedDataArray)
+            {
+                sharedBytePool.Return(data);
+            }
+            _residualData = null;
+            _residualDataSz = 0;
+
+            return null;
         }
     }
 
