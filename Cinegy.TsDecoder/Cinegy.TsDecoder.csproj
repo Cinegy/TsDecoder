@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
-		<Version>3.0.0-alpha</Version>
+		<Version>4.0.0-alpha</Version>
 		<Authors>Lewis Kirkaldie</Authors>
 		<Company>Cinegy GmbH</Company>
 		<Description>An MPEG2 Transport Stream decoder, in C# using NET 6.0</Description>
