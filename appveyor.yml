@@ -2,7 +2,6 @@ version: 4.0.{build}-alpha
 branches:
   only:
   - master
-  - v3-updates
 image: Visual Studio 2022
 configuration: Release
 dotnet_csproj:
