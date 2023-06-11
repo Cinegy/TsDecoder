@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Cinegy.TsDecoder.Descriptors;
 using Cinegy.TsDecoder.Tables;
 
 namespace Cinegy.TsDecoder.TransportStream
 {
     public class TsDecoder
     {
-
         public ProgramAssociationTable ProgramAssociationTable => _patFactory.ProgramAssociationTable;
         public ServiceDescriptionTable ServiceDescriptionTable => _sdtFactory.ServiceDescriptionTable;
         public ServiceDescriptionTable OtherServiceDescriptionTable => _otherSdtFactory.ServiceDescriptionTable;
@@ -48,6 +48,22 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public delegate void TableChangeEventHandler(object sender, TableChangedEventArgs args);
 
+        public int CorruptedTablePackets()
+        {
+            var corruptedPkts = _patFactory.CorruptedPackets;
+            corruptedPkts += _eitFactory.CorruptedPackets;
+            corruptedPkts += _nitFactory.CorruptedPackets;
+            corruptedPkts += _otherSdtFactory.CorruptedPackets;
+            corruptedPkts += _sdtFactory.CorruptedPackets;
+            corruptedPkts += _sitFactory.CorruptedPackets;
+            foreach (var programMapTableFactory in _pmtFactories)
+            {
+                corruptedPkts += programMapTableFactory.CorruptedPackets;
+            }
+
+            return corruptedPkts;
+        }
+
         public TsDecoder()
         {
 #if !NET461
@@ -56,22 +72,33 @@ namespace Cinegy.TsDecoder.TransportStream
             SetupFactories();
         }
 
-        public void AddData(byte[] data)
+        public void AddData(byte[] data, bool rentPackets = true)
         {
-            if(_packetFactory == null) _packetFactory = new TsPacketFactory();
+            _packetFactory ??= new TsPacketFactory();
 
-            var tsPackets = _packetFactory.GetTsPacketsFromData(data);
-            
-            if (tsPackets == null)
+            if (rentPackets)
             {
-                throw new InvalidDataException("Provided data buffer did not contain any TS packets");
-            }
+                var tsPackets = _packetFactory.GetRentedTsPacketsFromData(data, out var pktCount);
 
-            foreach (var packet in tsPackets)
+                if (tsPackets == null)
+                {
+                    throw new InvalidDataException("Provided data buffer did not contain any TS packets");
+                }
+
+                AddPackets(tsPackets[..pktCount]);
+
+                _packetFactory.ReturnTsPackets(tsPackets, pktCount);
+            }
+            else
             {
-                AddPacket(packet);
-            }
+                var tsPackets = _packetFactory.GetTsPacketsFromData(data);
+                if (tsPackets == null)
+                {
+                    throw new InvalidDataException("Provided data buffer did not contain any TS packets");
+                }
 
+                AddPackets(tsPackets);
+            }
         }
 
         public void AddPackets(IEnumerable<TsPacket> newPackets)
@@ -95,14 +122,14 @@ namespace Cinegy.TsDecoder.TransportStream
 
                 switch (newPacket.Pid)
                 {
-                    case (short)PidType.PatPid:
+                    case (ushort)PidType.PatPid:
                         _patFactory.AddPacket(newPacket);
                         break;
-                    case (short)PidType.SdtBatPid:
+                    case (ushort)PidType.SdtBatPid:
                         _sdtFactory.AddPacket(newPacket);
                         _otherSdtFactory.AddPacket(newPacket);
                         break;
-                    case (short)PidType.EitPid:
+                    case (ushort)PidType.EitPid:
                         _eitFactory.AddPacket(newPacket);
                         break;
                     case 2048:
@@ -164,6 +191,25 @@ namespace Cinegy.TsDecoder.TransportStream
             return selectedDesc;
             
         }
+        
+        public EsInfo GetFirstEsStreamForProgramNumber(int? programNumber, int streamType) 
+        {
+            if (programNumber == null) return null;
+
+            var selectedPmt = ProgramMapTables?.FirstOrDefault(t => t.ProgramNumber == programNumber);
+
+            if (selectedPmt == null) return null;
+
+            foreach (var esStream in selectedPmt.EsStreams)
+            {
+                if (esStream.StreamType != streamType) continue;
+
+                var desc = esStream.Descriptors.FirstOrDefault();
+                return esStream;
+            }
+
+            return null;
+        }
 
         public EsInfo GetEsStreamForProgramNumberByTag(int? programNumber, int streamType, int descriptorTag) 
         {
@@ -196,6 +242,7 @@ namespace Cinegy.TsDecoder.TransportStream
                 return;
             }
 
+            //TODO: LK - why is this commented - resolve or remove - Nov 2022
            // CheckPcr(tsPacket);
 
             var contains = false;
@@ -226,8 +273,7 @@ namespace Cinegy.TsDecoder.TransportStream
 
             selectedPmt.AddPacket(tsPacket);
         }
-
-     
+        
         private void SetupFactories()
         {
             _patFactory = new ProgramAssociationTableFactory();

@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -15,16 +15,6 @@
 
 namespace Cinegy.TsDecoder.TransportStream
 {
-    public struct PesHdr
-    {
-        public uint StartCode;
-        public byte StreamId;
-        public ushort PacketLength;
-        public long Pts;
-        public long Dts;
-        public byte[] Payload;
-        public byte HeaderLength;
-    }
 
     public struct TsPacket
     {
@@ -32,62 +22,18 @@ namespace Cinegy.TsDecoder.TransportStream
         public bool TransportErrorIndicator; //Set when a demodulator can't correct errors from FEC data - this would inform a stream processor to ignore the packet
         public bool PayloadUnitStartIndicator; //true = the start of PES data or PSI otherwise zero only. 
         public bool TransportPriority; //true = the current packet has a higher priority than other packets with the same PID.
-        public short Pid; //Packet identifier flag, used to associate one packet with a set
-        public short ScramblingControl; // '00' = Not scrambled, For DVB-CSA only:'01' = Reserved for future use, '10' = Scrambled with even key, '11' = Scrambled with odd key
-        public bool AdaptationFieldExists;
+        public ushort Pid; //Packet identifier flag, used to associate one packet with a set
+        public byte ScramblingControl; // '00' = Not scrambled, For DVB-CSA only:'01' = Reserved for future use, '10' = Scrambled with even key, '11' = Scrambled with odd key
+        public bool AdaptationFieldExists; // Combined with Contains Payload flag - '00' = Reserved, '01' = Payload only, '10' = Adaptation field only, '11' = Adaptation field and payload
         public bool ContainsPayload;
-        public short ContinuityCounter;
+        public byte ContinuityCounter;
         public PesHdr PesHeader;
         public byte[] Payload;
+        public int PayloadLen; //length of valid data within Payload field (source data array may be oversized if rented)
         public AdaptationField AdaptationField;
         public byte[] SourceData; //original data used to construct packet (if chosen to retain)
+        public int SourceDataLen; //length of valid data within SourceData field (source data array may be oversized if rented)
         public int SourceBufferIndex; //index into original data buffer used to construct packet
-    }
-
-    public struct AdaptationField
-    {
-        public int FieldSize;
-        public bool DiscontinuityIndicator;
-        public bool RandomAccessIndicator;
-        public bool ElementaryStreamPriorityIndicator;
-        public bool PcrFlag;
-        public bool OpcrFlag;
-        public bool SplicingPointFlag;
-        public bool TransportPrivateDataFlag;
-        public bool AdaptationFieldExtensionFlag;
-        public ulong Pcr;
-    }
-
-    public enum PidType
-    {
-        PatPid = 0x0,
-        CatPid = 0x1,
-        TsDescPid = 0x2,
-        NitPid = 0x10,
-        SdtBatPid = 0x11,
-        EitPid = 0x12,
-        NullPid = 0x1FFF
-    }
-
-    public enum PesStreamTypes
-    {
-        ProgramStreamMap = 0xBC,
-        PrivateStream1 = 0xBD,
-        PaddingStream = 0xBE,
-        PrivateStream2 = 0xBF,
-        ECMStream = 0xF0,
-        EMMStream = 0xF1,
-        DSMCCStream = 0xF2,
-        IEC13522Stream = 0xF3,
-        H2221TypeAStream = 0xF4,
-        H2221TypeBStream = 0xF5,
-        H2221TypeCStream = 0xF6,
-        H2221TypeDStream = 0xF7,
-        H2221TypeEStream = 0xF8,
-        AncillaryStream = 0xF9,
-        IEC144961SLPacketizedStream = 0xFA,
-        IEC144961FlexMuxStream = 0xFB,
-        ProgramStreamDirectory = 0xFF
     }
 
 

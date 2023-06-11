@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Cinegy.TsDecoder.TransportStream;
 using System;
+using Cinegy.TsDecoder.Descriptors;
 
 namespace Cinegy.TsDecoder.Tables
 {
@@ -38,12 +39,19 @@ namespace Cinegy.TsDecoder.Tables
             {
                 InProgressTable = new ProgramMapTable { Pid = packet.Pid, PointerField = packet.Payload[0] };
 
-                if (InProgressTable.PointerField > packet.Payload.Length)
+                if (InProgressTable.PointerField > packet.PayloadLen)
                 {
                     Debug.Assert(true, "Program Map Table has packet pointer outside the packet.");
                 }
 
                 var pos = 1 + InProgressTable.PointerField;
+
+                if (pos > 184)
+                {
+                    CorruptedPackets++;
+                    InProgressTable = null;
+                    return;
+                }
 
                 InProgressTable.VersionNumber = (byte)((packet.Payload[pos + 5] & 0x3E) >> 1);
 
@@ -55,14 +63,13 @@ namespace Cinegy.TsDecoder.Tables
 
                 InProgressTable.TableId = packet.Payload[pos];
                 InProgressTable.SectionLength =
-                    (short)(((packet.Payload[pos + 1] & 0x3) << 8) + packet.Payload[pos + 2]);
+                    (ushort)(((packet.Payload[pos + 1] & 0x3) << 8) + packet.Payload[pos + 2]);
                 InProgressTable.ProgramNumber = (ushort)((packet.Payload[pos + 3] << 8) + packet.Payload[pos + 4]);
                 InProgressTable.CurrentNextIndicator = (packet.Payload[pos + 5] & 0x1) != 0;
                 InProgressTable.SectionNumber = packet.Payload[pos + 6];
                 InProgressTable.LastSectionNumber = packet.Payload[pos + 7];
                 InProgressTable.PcrPid = (ushort)(((packet.Payload[pos + 8] & 0x1f) << 8) + packet.Payload[pos + 9]);
-                InProgressTable.ProgramInfoLength =
-                    (ushort)(((packet.Payload[pos + 10] & 0x3) << 8) + packet.Payload[pos + 11]);
+                InProgressTable.ProgramInfoLength = (byte)(((packet.Payload[pos + 10] & 0x3) << 8) + packet.Payload[pos + 11]);
 
             }
 
@@ -72,12 +79,32 @@ namespace Cinegy.TsDecoder.Tables
 
             if (!HasAllBytes()) return;
 
+            if (InProgressTable.ProgramInfoLength > Data.Length)
+            {
+                CorruptedPackets++;
+                InProgressTable = null;
+                return;
+            }
+
             var startOfNextField = GetDescriptors(InProgressTable.ProgramInfoLength, InProgressTable.PointerField + 13);
 
+            if (startOfNextField < 0)
+            {
+                CorruptedPackets++;
+                InProgressTable = null;
+                return;
+            }
             InProgressTable.EsStreams = ReadEsInfoElements(InProgressTable.SectionLength, startOfNextField);
 
             var crcPos = InProgressTable.PointerField + InProgressTable.SectionLength - 1; //+3 for start, -4 for len CRC = -1
-        
+
+            if (crcPos > Data.Length)
+            {
+                CorruptedPackets++;
+                InProgressTable = null;
+                return;
+
+            }
             InProgressTable.Crc = (uint)((Data[crcPos] << 24) + (Data[crcPos+1] <<16) + 
                                          (Data[crcPos + 2] << 8) + Data[crcPos + 3]);
                         
@@ -86,7 +113,7 @@ namespace Cinegy.TsDecoder.Tables
             OnTableChangeDetected();
         }
 
-        private List<EsInfo> ReadEsInfoElements(short sectionLength, int startOfNextField)
+        private List<EsInfo> ReadEsInfoElements(ushort sectionLength, int startOfNextField)
         {
             var streams = new List<EsInfo>();
 
@@ -95,11 +122,16 @@ namespace Cinegy.TsDecoder.Tables
                 var es = new EsInfo
                 {
                     StreamType = Data[startOfNextField],
-                    ElementaryPid = (short)(((Data[startOfNextField + 1] & 0x1f) << 8) + Data[startOfNextField + 2]),
+                    ElementaryPid = (ushort)(((Data[startOfNextField + 1] & 0x1f) << 8) + Data[startOfNextField + 2]),
                     EsInfoLength = (ushort)(((Data[startOfNextField + 3] & 0x3) << 8) + Data[startOfNextField + 4])
                 };
 
                 es.SourceData = new byte[5 + es.EsInfoLength];
+                if (es.SourceData.Length > (Data.Length - startOfNextField))
+                {
+                    CorruptedPackets++;
+                    return null;
+                }
                 Buffer.BlockCopy(Data, startOfNextField, es.SourceData, 0, es.SourceData.Length);
 
                 var descriptors = new List<Descriptor>();

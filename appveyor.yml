@@ -1,4 +1,4 @@
-version: 3.0.{build}
+version: 4.0.{build}-alpha
 branches:
   only:
   - master
@@ -23,8 +23,8 @@ after_build:
     7z a Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip %APPVEYOR_BUILD_FOLDER%\Cinegy.TsDecoder\bin
 
     appveyor PushArtifact Cinegy.TsDecoder-%APPVEYOR_REPO_BRANCH%-%APPVEYOR_BUILD_VERSION%-PDB.zip
-deploy:
-- provider: NuGet
-  api_key:
-    secure: H2zueAN/L9RNQugcZ31Qbc0e9T62ipvbiH61y2IXCjYOL3lebABxDpl8kh9dosN1
-  skip_symbols: true
+# deploy:
+# - provider: NuGet
+#   api_key:
+#     secure: H2zueAN/L9RNQugcZ31Qbc0e9T62ipvbiH61y2IXCjYOL3lebABxDpl8kh9dosN1
+#   skip_symbols: true

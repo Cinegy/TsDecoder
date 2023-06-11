@@ -1,4 +1,4 @@
-﻿/* Copyright 2017-2019 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -29,13 +29,12 @@ namespace Cinegy.TsDecoder.Buffers
         private int _nextAddPos;
         private int _lastRemPos;
         private bool _wrapped;
-        private bool _allowOverflow;
-        private long _ticksPerMs;
+        private readonly bool _allowOverflow;
 
-        private readonly object _lockObj = new object();
+        private readonly object _lockObj = new();
         private readonly int _packetSize = 1500;
 
-        static EventWaitHandle _waitHandle = new AutoResetEvent(false);
+        private static readonly EventWaitHandle WaitHandle = new AutoResetEvent(false);
 
         public RingBuffer()
         {
@@ -70,17 +69,28 @@ namespace Cinegy.TsDecoder.Buffers
         /// Add a packet into the ring buffer.
         /// </summary>
         /// <param name="data"></param>
-        public void Add(ref byte[] data)
+        public void Add(byte[] data)
         {
-           Add(ref data, (ulong)Stopwatch.GetTimestamp());
+           Add(data, data.Length);
         }
-
+        
         /// <summary>
         /// Add a packet into the ring buffer.
         /// </summary>
         /// <param name="data">Bytes to store inside ringbuffer slot</param>
+        /// <param name="dataLen">Length of the data within the buffer to consider valid</param>
+        public void Add(byte[] data, int dataLen)
+        {
+           Add(data, dataLen, (ulong)Stopwatch.GetTimestamp());
+        }
+        
+        /// <summary>
+        /// Add a packet into the ring buffer.
+        /// </summary>
+        /// <param name="data">Bytes to store inside ringbuffer slot</param>
+        /// <param name="dataLen">Length of the data within the buffer to consider valid</param>
         /// <param name="timestamp">Timestamp value to associate with entry</param>
-        public void Add(ref byte[] data, ulong timestamp)
+        public void Add(byte[] data, int dataLen, ulong timestamp)
         {
             lock (_lockObj)
             {
@@ -89,16 +99,15 @@ namespace Cinegy.TsDecoder.Buffers
                     if(!_allowOverflow){
                         throw new OverflowException("Ringbuffer has overflowed");
                     }
-                    else{
-                        _lastRemPos++;
-                    }
+
+                    _lastRemPos++;
                 }
 
-                if (data.Length <= _packetSize)
+                if (dataLen <= _packetSize)
                 {
                     //good data size
-                    Array.Copy(data,_buffer[_nextAddPos],data.Length);
-                    _dataLength[_nextAddPos] = data.Length;
+                    Array.Copy(data,_buffer[_nextAddPos],dataLen);
+                    _dataLength[_nextAddPos] = dataLen;
                     _timestamp[_nextAddPos++] = timestamp;
                     
                     if (_nextAddPos > BufferSize)
@@ -107,7 +116,7 @@ namespace Cinegy.TsDecoder.Buffers
                         _wrapped = true;
                     }
 
-                    _waitHandle.Set();
+                    WaitHandle.Set();
                 }
                 else
                 {
@@ -120,7 +129,7 @@ namespace Cinegy.TsDecoder.Buffers
         /// Get the any element from the ring buffer without advancing any position elements
         /// </summary>
         /// <returns>Required size of reference buffer, if passed-in buffer was too small to accomodate data. Otherwise returns zero.</returns>
-        public int Peek(int position, ref byte[] dataBuffer, out int dataLength)
+        public int Peek(int position, byte[] dataBuffer, out int dataLength)
         {
             lock (_lockObj)
             {
@@ -138,34 +147,46 @@ namespace Cinegy.TsDecoder.Buffers
         /// Get the oldest element from the ring buffer and advances the removal position - blocks if no data is yet available
         /// </summary>
         /// <returns>Required size of reference buffer, if passed-in buffer was too small to accomodate data. Otherwise returns zero.</returns>
-        public int Remove(ref byte[] dataBuffer,out int dataLength, out ulong timestamp)
+        public int Remove(byte[] dataBuffer,out int dataLength, out ulong timestamp, CancellationToken? cancellationToken = null)
         {
-            while(true)
+            cancellationToken?.ThrowIfCancellationRequested();
+
+            try
             {
-                lock (_lockObj)
+                while (cancellationToken?.IsCancellationRequested != true)
                 {
-                    if (_lastRemPos > BufferSize)
+                    lock (_lockObj)
                     {
-                        _lastRemPos = _lastRemPos%BufferSize - 1;
+                        if (_lastRemPos > BufferSize)
+                        {
+                            _lastRemPos = _lastRemPos % BufferSize - 1;
+                        }
+
+                        if (_lastRemPos != _nextAddPos || _wrapped)
+                        {
+                            if (_wrapped) _wrapped = false;
+
+                            dataLength = _dataLength[_lastRemPos];
+                            timestamp = _timestamp[_lastRemPos];
+
+                            if (dataBuffer.Length < dataLength)
+                                return dataLength;
+
+                            Buffer.BlockCopy(_buffer[_lastRemPos++], 0, dataBuffer, 0, dataLength);
+                            return 0;
+                        }
                     }
 
-                    if (_lastRemPos != _nextAddPos || _wrapped)
-                    {
-                        if (_wrapped) _wrapped = false;
-
-                        dataLength = _dataLength[_lastRemPos];
-                        timestamp = _timestamp[_lastRemPos];
-
-                        if (dataBuffer.Length < dataLength)
-                            return dataLength;
-                        
-                        Buffer.BlockCopy(_buffer[_lastRemPos++], 0, dataBuffer, 0, dataLength);
-                        return 0;
-                    }
+                    WaitHandle.WaitOne(100);
                 }
-                
-                _waitHandle.WaitOne();
             }
+            catch
+            {
+            }
+
+            dataLength = 0;
+            timestamp = 0;
+            return 0;
         }
 
         /// <summary>

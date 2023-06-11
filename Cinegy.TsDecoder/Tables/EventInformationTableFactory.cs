@@ -1,4 +1,4 @@
-﻿/* Copyright 2017 Cinegy GmbH.
+﻿/* Copyright 2017-2023 Cinegy GmbH.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Cinegy.TsDecoder.Descriptors;
 using Cinegy.TsDecoder.TransportStream;
 
 namespace Cinegy.TsDecoder.Tables
@@ -48,7 +49,7 @@ namespace Cinegy.TsDecoder.Tables
             {
                 InProgressTable = new EventInformationTable { Pid = packet.Pid, PointerField = packet.Payload[0] };
 
-                if (InProgressTable.PointerField > packet.Payload.Length)
+                if (InProgressTable.PointerField > packet.PayloadLen)
                 {
                     Debug.Assert(true, "Event Information Table has packet pointer outside the packet.");
                 }
@@ -74,9 +75,9 @@ namespace Cinegy.TsDecoder.Tables
                 }
 
                 InProgressTable.SectionLength =
-                    (short)(((packet.Payload[pos + 1] & 0x3) << 8) + packet.Payload[pos + 2]);
+                    (ushort)(((packet.Payload[pos + 1] & 0x3) << 8) + packet.Payload[pos + 2]);
 
-                InProgressTable.SericeId = (ushort)((packet.Payload[pos + 3] << 8) + packet.Payload[pos + 4]);
+                InProgressTable.ServiceId = (ushort)((packet.Payload[pos + 3] << 8) + packet.Payload[pos + 4]);
                 InProgressTable.CurrentNextIndicator = (packet.Payload[pos + 5] & 0x1) != 0;
                 InProgressTable.SectionNumber = packet.Payload[pos + 6];
                 InProgressTable.LastSectionNumber = packet.Payload[pos + 7];
@@ -112,10 +113,10 @@ namespace Cinegy.TsDecoder.Tables
                 var item = new EventInformationItem
                 {
                     EventId = (ushort)((Data[startOfNextField] << 8) + Data[startOfNextField + 1]),
-                    StartTime = (ulong)(((ulong)(Data[startOfNextField + 2]) << 32) + ((ulong)(Data[startOfNextField + 3]) << 24) + ((ulong)(Data[startOfNextField + 4]) << 16) + ((ulong)(Data[startOfNextField + 5]) << 8) + ((ulong)(Data[startOfNextField + 6]))),
+                    StartTime = (((ulong)(Data[startOfNextField + 2]) << 32) + ((ulong)(Data[startOfNextField + 3]) << 24) + ((ulong)(Data[startOfNextField + 4]) << 16) + ((ulong)(Data[startOfNextField + 5]) << 8) + ((ulong)(Data[startOfNextField + 6]))),
                     Duration = (uint)((Data[startOfNextField + 7] << 16) + (Data[startOfNextField + 8] << 8) + Data[startOfNextField + 9]),
                     RunningStatus = (byte)((Data[startOfNextField + 10] >> 5) & 0x07),
-                    FreeCAMode = (bool)((Data[startOfNextField + 10] & 0x10) == 0x10),
+                    FreeCAMode = ((Data[startOfNextField + 10] & 0x10) == 0x10),
                     DescriptorsLoopLength = (ushort)(((Data[startOfNextField + 10] & 0x3) << 8) + Data[startOfNextField + 11])
                 };
 
