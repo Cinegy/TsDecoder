@@ -63,15 +63,15 @@ namespace Cinegy.TsDecoder.TransportStream
                     PacketStartCodePrefix = DefaultPacketStartCodePrefix;
                     StreamId = (byte)type;
                     PesPacketLength = (ushort)payload.Length;
-                    _data = ArrayPool<byte>.Shared.Rent(PesPacketLength);
-                    Buffer.BlockCopy(payload, 0, _data, 0, PesPacketLength);
+                    Data = new byte[payload.Length];
+                    Buffer.BlockCopy(payload, 0, Data, 0, PesPacketLength);
                     break;
                 case PesStreamTypes.PaddingStream:
                     PacketStartCodePrefix = DefaultPacketStartCodePrefix;
                     StreamId = (byte)type;
                     PesPacketLength = (ushort)payload.Length;
-                    _data = ArrayPool<byte>.Shared.Rent(PesPacketLength);
-                    Array.Fill<byte>(_data,0xFF);
+                    Data = new byte[payload.Length];
+                    Array.Fill<byte>(Data,0xFF);
                     break;
                 default:
                     if (optionalPesHeader is null)
@@ -83,8 +83,8 @@ namespace Cinegy.TsDecoder.TransportStream
                     StreamId = (byte)type;
                     PesPacketLength = (ushort)(payload.Length + optionalPesHeader.PesHeaderLength + 3);
                     OptionalPesHeader = optionalPesHeader;
-                    _data = ArrayPool<byte>.Shared.Rent(payload.Length);
-                    Buffer.BlockCopy(payload, 0, _data, 0, payload.Length);
+                    Data = new byte[payload.Length];
+                    Buffer.BlockCopy(payload, 0, Data, 0, payload.Length);
                     break;
             }
         }
@@ -170,7 +170,7 @@ namespace Cinegy.TsDecoder.TransportStream
             if (SimplePesTypes.Contains((PesStreamTypes)StreamId) || StreamId == (byte)PesStreamTypes.PaddingStream)
             {
                 //TODO: this needs  review - it might insert incorrect data!
-                Buffer.BlockCopy(_data, 0, data, 6, PesPacketLength);
+                Buffer.BlockCopy(Data, 0, data, 6, PesPacketLength);
 
                 return data;
             }
@@ -200,6 +200,8 @@ namespace Cinegy.TsDecoder.TransportStream
 
         public bool Decode()
         {
+            if (_data == null) return false;
+
             if (!HasAllBytes()) return false;
 
             if (!SimplePesTypes.Contains((PesStreamTypes)StreamId))
